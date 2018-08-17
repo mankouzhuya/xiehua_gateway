@@ -1,0 +1,82 @@
+server:
+  port: 5050
+  http2:
+    enabled: true
+#  servlet:
+#    context-path: /xiehua_gateway
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    status-page-url-path: /actuator/info
+    health-check-url-path: /actuator/health
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://eureka:eureka123@127.0.0.1:7210/eureka/
+
+
+spring:
+  application:
+    name: xiehua_gateway
+  jmx:
+    enabled: false
+  http:
+      encoding:
+        charset: UTF-8
+        force: true
+  redis:
+      database: 4
+      host: 10.200.157.139
+      port: 6379
+      password: Zchzredis2017
+      lettuce:
+        pool:
+          max-active: 20
+          max-wait: 2
+          max-idle: 8
+          min-idle: 2
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lowerCaseServiceId: true
+
+hystrix:
+  command:
+    default:
+      execution:
+        timeout:
+          enabled: true
+        isolation:
+          thread:
+            timeoutInMilliseconds: 50000
+
+ribbon:
+  ConnectTimeout: 1000
+  ReadTimeout: 30000
+
+#log
+#logging:
+#  level:
+#    org.springframework.cloud.gateway: DEBUG
+#    org.springframework.http.server.reactive: DEBUG
+#    org.springframework.web.reactive: DEBUG
+#    reactor.ipc.netty: DEBUG
+
+#自定义配置
+#jwt配置
+jwt:
+  secret: jFCOdJy2Av4PkEPoQj0JGSyBlSbOz7YaGP+NlQVjhlg=
+  expiration: 604800   #7day 过期
+
+#不需要权限验证的地址
+security:
+  permitUrl: '[{"name":"调用失败","url":"/fallback/**"},{"name":"订单测试1","url":"/order_center/public/**"}]'
+
+#ip白名单
+whiteList:
+  permit: '[{"name":"订单测试2","url":"/order_center/protected/**","ip":["127.0.0.1","127.0.0.2"]},{"name":"产品","url":"/product_center/**","ip":["127.0.0.3","127.0.0.4"]}]'
+

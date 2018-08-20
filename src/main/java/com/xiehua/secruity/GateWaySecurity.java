@@ -5,9 +5,6 @@ import com.xiehua.authentication.JwtAuthenticationFilter;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.converter.ServerHttpBearerAuthenticationConverter;
 import com.xiehua.handle.JWTAuthenticationSuccessHandler;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
@@ -25,7 +22,7 @@ import java.util.stream.Collectors;
 @EnableWebFluxSecurity
 public class GateWaySecurity {
 
-    public static List<String> URL_PERMIT_ALL = Arrays.asList("/favicon.ico","/*.html","/**/*.html","/**/*.css","/**/*.js","/actuator/**");
+    public static List<String> URL_PERMIT_ALL = Arrays.asList("/favicon.ico", "/*.html", "/**/*.html", "/**/*.css", "/**/*.js", "/actuator/**");
 
     @Autowired
     private CustomConfig customConfig;
@@ -54,10 +51,9 @@ public class GateWaySecurity {
                 .anyExchange().authenticated()
                 .and()
                 .addFilterAt(new IPFilter(customConfig), SecurityWebFiltersOrder.FIRST)
-                .addFilterAt(new JwtAuthenticationFilter(customConfig,converter), SecurityWebFiltersOrder.HTTP_BASIC)
+                .addFilterAt(new JwtAuthenticationFilter(customConfig, converter), SecurityWebFiltersOrder.HTTP_BASIC)
                 .build();
     }
-
 
 
 }

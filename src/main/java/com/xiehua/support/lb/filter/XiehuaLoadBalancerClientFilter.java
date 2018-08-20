@@ -105,9 +105,7 @@ public class XiehuaLoadBalancerClientFilter extends LoadBalancerClientFilter {
         @Override
         public String getScheme() {
             String scheme = delegate.getScheme();
-            if (scheme != null) {
-                return scheme;
-            }
+            if (scheme != null) return scheme;
             return this.overrideScheme;
         }
 

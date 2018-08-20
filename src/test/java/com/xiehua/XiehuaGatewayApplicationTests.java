@@ -3,6 +3,9 @@ package com.xiehua;
 import es.moki.ratelimitj.core.limiter.request.ReactiveRequestRateLimiter;
 import es.moki.ratelimitj.core.limiter.request.RequestLimitRule;
 import es.moki.ratelimitj.redis.request.RedisSlidingWindowRequestRateLimiter;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -31,10 +34,13 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.KeyPair;
 import java.security.SecureRandom;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -214,6 +220,38 @@ public class XiehuaGatewayApplicationTests {
         StepVerifier.create(generateMonoWithError())
                 .expectErrorMessage("some error")
                 .verify();
+    }
+
+    @Test
+    public void test_3(){
+                //JWT
+        SecretKey key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+        String key_a = Base64.getEncoder().encodeToString(key.getEncoded());
+        System.out.println(key_a);
+        //RAS
+        KeyPair keyPair = Keys.keyPairFor(SignatureAlgorithm.RS512);
+        System.out.println(keyPair.getPublic().getEncoded());
+
+        byte[] keyBytes = Base64.getDecoder().decode("jFCOdJy2Av4PkEPoQj0JGSyBlSbOz7YaGP+NlQVjhlg=");
+        SecretKey key2 = Keys.hmacShaKeyFor(keyBytes);
+
+        SecretKeySpec key3 = new SecretKeySpec(keyBytes, "HmacSHA256");
+
+        String jws2 = Jwts.builder()
+                .setIssuer("xiehua_gateway")//签发者
+                .setSubject("test01")//所面向的用户
+                .setAudience("user_name")//接收jwt的一方
+                .setExpiration(Date.from(LocalDateTime.now().plusDays(10).atZone(ZoneId.systemDefault()).toInstant())) //jwt的过期时间，这个过期时间必须大于签发时间  Date.from(LocalDateTime.now().plusMinutes(30).atZone(ZoneId.systemDefault()).toInstant())
+                .setNotBefore(new Date()) //jwt不可用时间
+                .setIssuedAt(new Date()) // 签发时间
+                .setId(UUID.randomUUID().toString()).signWith(key2).compact(); //just an example id
+        System.out.println(jws2);
+       // String jws2 = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ4aWVodWFfZ2F0ZXdheSIsInN1YiI6ImdpZCIsImF1ZCI6InVzZXJfbmFtZSIsImV4cCI6MTUzMzc4NjI3OCwibmJmIjoxNTMzNzg0NDc4LCJpYXQiOjE1MzM3ODQ0NzgsImp0aSI6IjBmYjk4ZTRhLWQ0MTUtNDY4NS05N2IzLTkwOTQwY2Y5ZDdhZCJ9.cp1ar5kRWraMDWlSSBq6Nb7fzK4O_KeFNCdch_0-si4";
+        System.out.println(Jwts.parser().setSigningKey(key2).parseClaimsJws(jws2).getBody().getExpiration());
+
+
+        System.out.println(LocalDateTime.now().plusDays(1));
+
     }
 
 }

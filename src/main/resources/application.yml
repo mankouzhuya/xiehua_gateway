@@ -2,8 +2,7 @@ server:
   port: 5050
   http2:
     enabled: true
-#  servlet:
-#    context-path: /xiehua_gateway
+
 
 eureka:
   instance:

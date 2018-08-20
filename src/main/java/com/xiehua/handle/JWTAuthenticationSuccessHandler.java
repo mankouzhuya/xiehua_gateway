@@ -19,25 +19,10 @@ public class JWTAuthenticationSuccessHandler implements ServerAuthenticationSucc
     @Override
     public Mono<Void> onAuthenticationSuccess(WebFilterExchange webFilterExchange, Authentication authentication) {
         ServerWebExchange exchange = webFilterExchange.getExchange();
-        //TODO refactor this nasty implementation
-//        exchange.getResponse()
-//                .getHeaders()
-//                .add(HttpHeaders.AUTHORIZATION, getHttpAuthHeaderValue(authentication));
-        logger.info("Token认证成功");
+        //TODO do something
+        logger.info("认证成功~");
         return webFilterExchange.getChain().filter(exchange);
     }
 
-    private static String getHttpAuthHeaderValue(Authentication authentication) {
-        return String.join(" ", "Bearer", tokenFromAuthentication(authentication));
-    }
-
-    private static String tokenFromAuthentication(Authentication authentication) {
-        //jwtTokenComponent.generateToken();
-//        return new JWTTokenService().generateToken(
-//                authentication.getName(),
-//                authentication.getCredentials(),
-//                authentication.getAuthorities());
-        return null;
-    }
 
 }

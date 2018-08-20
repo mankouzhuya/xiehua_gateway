@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.dto.security.SecurityPermitUrl;
 import com.xiehua.config.dto.white_list.WhiteListPermit;
-import com.xiehua.handle.HttpErrorHandler;
 import io.jsonwebtoken.security.Keys;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
@@ -18,28 +17,14 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.cloud.client.discovery.DiscoveryClient;
-import org.springframework.cloud.gateway.discovery.DiscoveryClientRouteDefinitionLocator;
-import org.springframework.cloud.gateway.discovery.DiscoveryLocatorProperties;
-import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
-import org.springframework.cloud.gateway.route.RouteLocator;
-import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.web.client.RestTemplate;
-import reactor.core.publisher.Mono;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -74,7 +59,6 @@ public class AppConfig {
 
     @Value("${whiteList.permit}")
     private String whiteListPermit;
-
 
 
     @Bean
@@ -136,32 +120,34 @@ public class AppConfig {
 //    }
 
 
-
-
     @Bean
-    public CustomConfig customConfig(ObjectMapper mapper){
-        CustomConfig config = new CustomConfig(geUrltPermit(mapper),getIpPermit(mapper));
+    public CustomConfig customConfig(ObjectMapper mapper) {
+        CustomConfig config = new CustomConfig(geUrltPermit(mapper), getIpPermit(mapper));
         config.setJwtExpiration(jwtExpiration);
-        config.setJwtSingKey(Keys.hmacShaKeyFor( Base64.getDecoder().decode(jwtSecreKey)));
+        config.setJwtSingKey(Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtSecreKey)));
         return config;
-       // return new CustomConfig(null,null);
+        // return new CustomConfig(null,null);
     }
 
     private List<SecurityPermitUrl> geUrltPermit(ObjectMapper mapper) {
         try {
-            return mapper.readValue(securityPermitUrl,new TypeReference<List<SecurityPermitUrl>>(){ });
+            return mapper.readValue(securityPermitUrl, new TypeReference<List<SecurityPermitUrl>>() {
+            });
         } catch (IOException e) {
-            logger.error("解析sso config 配置项permit url错误",e);
+            logger.error("解析sso config 配置项permit url错误", e);
             return null;
         }
     }
 
     private List<WhiteListPermit> getIpPermit(ObjectMapper mapper) {
         try {
-            return mapper.readValue(whiteListPermit,new TypeReference<List<WhiteListPermit>>(){ });
+            return mapper.readValue(whiteListPermit, new TypeReference<List<WhiteListPermit>>() {
+            });
         } catch (IOException e) {
-            logger.error("解析sso config 配置项ip permit错误",e);
+            logger.error("解析sso config 配置项ip permit错误", e);
             return null;
         }
     }
+
+
 }

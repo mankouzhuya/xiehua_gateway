@@ -58,6 +58,14 @@ ribbon:
   ConnectTimeout: 1000
   ReadTimeout: 30000
 
+
+  #开启actuator管理api，后面要关闭
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
 #log
 #logging:
 #  level:

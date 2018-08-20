@@ -16,7 +16,7 @@ import java.util.Objects;
 
 @Slf4j
 @Component
-public class RateLimitByCpuGatewayFilter implements GatewayFilter, Ordered {
+public class CpuRateLimitGatewayFilter implements GatewayFilter, Ordered {
 
     @Autowired
     private MetricsEndpoint metricsEndpoint;

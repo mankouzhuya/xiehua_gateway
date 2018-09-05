@@ -11,6 +11,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.userdetails.MapReactiveUserDetailsService;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
 import java.io.IOException;
@@ -31,6 +36,17 @@ public class GateWaySecurity {
     private ServerHttpBearerAuthenticationConverter converter;
 
     @Bean
+    public PasswordEncoder bCryptPasswordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public MapReactiveUserDetailsService userDetailsRepository() {
+        UserDetails user = User.builder().username("xiehua_gateway_admin").password("xiehua_gateway_admin").roles("GATEWAY_ADMIN").passwordEncoder(s -> bCryptPasswordEncoder().encode(s)).build();
+        return new MapReactiveUserDetailsService(user);
+    }
+
+    @Bean
     public JWTAuthenticationSuccessHandler jwtAuthenticationSuccessHandler() {
         return new JWTAuthenticationSuccessHandler();
     }
@@ -47,9 +63,11 @@ public class GateWaySecurity {
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .pathMatchers(permitUrls.toArray(new String[permitUrls.size()])).permitAll()
                 .pathMatchers(protectUrls.toArray(new String[protectUrls.size()])).hasRole(CustomConfig.SecurityRoleEnum.role_inner_protected.getRole())
+                .pathMatchers("/gateway/**").hasRole("GATEWAY_ADMIN")//网关登录配置角色
                 .pathMatchers("/order_center/private_sleep/**").hasRole("ADMIN")
                 .anyExchange().authenticated()
                 .and()
+                .csrf().disable()
                 .addFilterAt(new IPFilter(customConfig), SecurityWebFiltersOrder.FIRST)
                 .addFilterAt(new JwtAuthenticationFilter(customConfig, converter), SecurityWebFiltersOrder.HTTP_BASIC)
                 .build();

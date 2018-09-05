@@ -34,6 +34,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.ReactiveHashOperations;
 import org.springframework.data.redis.core.ReactiveRedisOperations;
+import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -94,6 +95,13 @@ public class ServerHttpBearerAuthenticationConverter implements Function<ServerW
         return Mono.justOrEmpty(serverWebExchange)
                 .map(s -> {
                     String u = s.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+                    if(StringUtils.isEmpty(u)) {
+                        HttpCookie cookie = s.getRequest().getCookies().getFirst(HttpHeaders.AUTHORIZATION);
+                        if(Objects.isNull(cookie)) throw new BadCredentialsException("没有token或token已失效");
+                        u = cookie.getValue();
+                        if(u.contains("%")) u = new String(Base64.getDecoder().decode(u));
+                        if(!u.startsWith(BEARER)) u = BEARER + u;
+                    };
                     if(Objects.isNull(u)) throw new BadCredentialsException("没有token或token已失效");
                     return u;
                 })

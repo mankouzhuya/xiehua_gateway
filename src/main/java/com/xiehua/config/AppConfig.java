@@ -84,8 +84,7 @@ public class AppConfig {
         HttpClient httpClient = httpClientBuilder.build();
 
         // httpClient连接配置，底层是配置RequestConfig
-        HttpComponentsClientHttpRequestFactory clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory(
-                httpClient);
+        HttpComponentsClientHttpRequestFactory clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
         clientHttpRequestFactory.setConnectTimeout(connectTimeout);
         clientHttpRequestFactory.setReadTimeout(readTimeout);
         clientHttpRequestFactory.setConnectionRequestTimeout(requestTimeout);

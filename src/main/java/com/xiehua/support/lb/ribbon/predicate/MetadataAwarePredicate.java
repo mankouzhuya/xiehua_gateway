@@ -16,8 +16,7 @@
 package com.xiehua.support.lb.ribbon.predicate;
 
 import com.netflix.niws.loadbalancer.DiscoveryEnabledServer;
-import com.xiehua.support.lb.filter.XiehuaLoadBalancerClientFilter;
-import org.springframework.util.StringUtils;
+import com.xiehua.support.lb.ribbon.rule.predicate.Predicate;
 
 import java.util.Collections;
 import java.util.Map;
@@ -30,19 +29,23 @@ import java.util.Set;
  */
 public class MetadataAwarePredicate extends DiscoveryEnabledPredicate {
 
+
+
+    public MetadataAwarePredicate( ){
+
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
     protected boolean apply(DiscoveryEnabledServer server, Object loadBalancerKey) {
-        if (loadBalancerKey != null) {
-            Map<String, String> map = (Map<String, String>) loadBalancerKey;
-            if(StringUtils.isEmpty(map.get(XiehuaLoadBalancerClientFilter.CLIENT_VERSION))) return true;
-            final Set<Map.Entry<String, String>> attributes = Collections.unmodifiableSet(map.entrySet());
-            final Map<String, String> metadata = server.getInstanceInfo().getMetadata();
-            return metadata.entrySet().containsAll(attributes);
-        }
-        return true;
-
+        if(loadBalancerKey == null) return false;
+        Map<String,String> map = (Map<String,String>)loadBalancerKey;
+        final Set<Map.Entry<String, String>> attributes = Collections.unmodifiableSet(map.entrySet());
+        final Map<String, String> metadata = server.getInstanceInfo().getMetadata();
+        return metadata.entrySet().containsAll(attributes);
     }
+
+
 }

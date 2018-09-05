@@ -2,7 +2,6 @@ package com.xiehua.authentication;
 
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.dto.jwt.JwtUser;
-import com.xiehua.config.dto.white_list.WhiteListPermit;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +24,6 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -36,7 +34,7 @@ import static com.xiehua.secruity.GateWaySecurity.URL_PERMIT_ALL;
 
 public class IPFilter implements WebFilter {
 
-    private static final Logger logger =  LoggerFactory.getLogger(IPFilter.class);
+    private static final Logger logger = LoggerFactory.getLogger(IPFilter.class);
 
     private CustomConfig config;
 
@@ -46,7 +44,7 @@ public class IPFilter implements WebFilter {
 
     private ServerAuthenticationSuccessHandler authenticationSuccessHandler = new WebFilterChainServerAuthenticationSuccessHandler();
 
-    public IPFilter(CustomConfig config){
+    public IPFilter(CustomConfig config) {
         this.config = config;
     }
 
@@ -60,16 +58,17 @@ public class IPFilter implements WebFilter {
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        if (logger.isDebugEnabled()) logger.debug("收到请求:{}", exchange.getRequest().getURI().toString());
         //OPTIONS 请求不处理
-        if(exchange.getRequest().getMethod().equals(HttpMethod.OPTIONS)) return exchange.getResponse().setComplete();
+        if (exchange.getRequest().getMethod().equals(HttpMethod.OPTIONS)) return exchange.getResponse().setComplete();
         //permit all url
         List<String> urls = Optional.ofNullable(config.getPermitUrls()).orElseThrow(RuntimeException::new).stream().map(s -> s.getUrl()).collect(Collectors.toList());
         urls.addAll(URL_PERMIT_ALL);
-        for (String url: urls) {
-            if(antPathMatcher.match(url,exchange.getRequest().getPath().value())) return chain.filter(exchange);
+        for (String url : urls) {
+            if (antPathMatcher.match(url, exchange.getRequest().getPath().value())) return chain.filter(exchange);
         }
-        // //white list chekc
-        return checkWhiteList(exchange,chain);
+        //white list chekc
+        return checkWhiteList(exchange, chain);
     }
 
     //white list chekc
@@ -77,20 +76,23 @@ public class IPFilter implements WebFilter {
         return Flux.fromIterable(config.getWhiteListPermits())
                 .switchIfEmpty(Flux.error(new RuntimeException("配置路径为空或不存在")))
                 .any(s -> antPathMatcher.match(s.getUrl(), exchange.getRequest().getPath().value()) && s.getIp().stream().filter(m -> m.equals(getIpAddr(exchange))).count() > 0)
-                .flatMap(m ->{
-                    if(m){
+                .flatMap(m -> {
+                    if (m) {
                         List<GrantedAuthority> list = Arrays.asList(CustomConfig.SecurityRoleEnum.role_inner_protected.getFullRole()).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
                         UserDetails userDetails = new JwtUser("xiehua_gid", "xiehua_account", "xiehua_pwd", list);
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, "xiehua_gid", userDetails.getAuthorities());
                         SecurityContextImpl securityContext = new SecurityContextImpl();
                         securityContext.setAuthentication(authentication);
                         return securityContextRepository.save(exchange, securityContext).then(authenticationSuccessHandler.onAuthenticationSuccess(new WebFilterExchange(exchange, chain), authentication)).subscriberContext(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(securityContext)));
-                    }else{
+                    } else {
                         return chain.filter(exchange);
                     }
                 });
     }
 
+    /**
+     * get ip address from server web exchange
+     **/
     public static String getIpAddr(ServerWebExchange exchange) {
         if (exchange == null) throw new RuntimeException("getIpAddr method ServerWebExchange Object is null");
         String ipString = exchange.getRequest().getHeaders().getFirst("x-forwarded-for");
@@ -113,4 +115,6 @@ public class IPFilter implements WebFilter {
         }
         return ipString;
     }
+
+
 }

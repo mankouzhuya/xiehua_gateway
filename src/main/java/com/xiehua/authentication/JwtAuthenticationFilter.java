@@ -66,7 +66,6 @@ public class JwtAuthenticationFilter implements WebFilter {
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        if(logger.isDebugEnabled()) logger.debug("收到请求:",exchange.getRequest().getURI().toString());
         //OPTIONS 请求不处理
         if(exchange.getRequest().getMethod().equals(HttpMethod.OPTIONS)) return exchange.getResponse().setComplete();
         //permit all url

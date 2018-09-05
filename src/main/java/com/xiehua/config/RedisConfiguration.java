@@ -20,6 +20,8 @@ import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import java.util.Map;
+
 @Configuration
 public class RedisConfiguration {
 
@@ -39,7 +41,7 @@ public class RedisConfiguration {
     private Integer database;
 
 
-    private static final String REDIS_PROTOCOL = "redis://";
+    public static final String REDIS_PROTOCOL = "redis://";
 
 //    @Bean
 //    public LettuceConnectionFactory redisConnectionFactory() {
@@ -68,24 +70,21 @@ public class RedisConfiguration {
      * Configures a {@link ReactiveRedisTemplate} with {@link String} keys and a typed
      * {@link Jackson2JsonRedisSerializer}.
      */
-    @Bean(name = "redisTemplateGUser")
-    public ReactiveRedisTemplate<String, GUser> reactiveJsonPersonRedisTemplate(ReactiveRedisConnectionFactory connectionFactory) {
-        Jackson2JsonRedisSerializer<GUser> serializer = new Jackson2JsonRedisSerializer<>(GUser.class);
-        serializer.setObjectMapper(mapper);
-        RedisSerializationContext.RedisSerializationContextBuilder<String, GUser> builder = RedisSerializationContext .newSerializationContext(new StringRedisSerializer());
-        RedisSerializationContext<String, GUser> serializationContext = builder.value(serializer).build();
-        return new ReactiveRedisTemplate<>(connectionFactory, serializationContext);
-    }
+//    @Bean(name = "redisTemplateGUser")
+//    public ReactiveRedisTemplate<String, GUser> reactiveJsonPersonRedisTemplate(ReactiveRedisConnectionFactory connectionFactory) {
+//        Jackson2JsonRedisSerializer<GUser> serializer = new Jackson2JsonRedisSerializer<>(GUser.class);
+//        serializer.setObjectMapper(mapper);
+//        RedisSerializationContext.RedisSerializationContextBuilder<String, GUser> builder = RedisSerializationContext .newSerializationContext(new StringRedisSerializer());
+//        RedisSerializationContext<String, GUser> serializationContext = builder.value(serializer).build();
+//        return new ReactiveRedisTemplate<>(connectionFactory, serializationContext);
+//    }
 
-    /**
-     * Configures a {@link ReactiveRedisTemplate} with {@link String} keys and {@link GenericJackson2JsonRedisSerializer}.
-     */
-    @Bean(name = "redisTemplateObject")
-    public ReactiveRedisTemplate<String, Object> reactiveJsonObjectRedisTemplate(ReactiveRedisConnectionFactory connectionFactory) {
-        RedisSerializationContext.RedisSerializationContextBuilder<String, Object> builder = RedisSerializationContext.newSerializationContext(new StringRedisSerializer());
-        RedisSerializationContext<String, Object> serializationContext = builder.value(new GenericJackson2JsonRedisSerializer("_type")).build();
-        return new ReactiveRedisTemplate<>(connectionFactory, serializationContext);
-    }
+//    @Bean
+//    public ReactiveRedisTemplate<String, String> reactiveRedisTemplate(ReactiveRedisConnectionFactory connectionFactory){
+//        return new ReactiveRedisTemplate<String, String>(connectionFactory, RedisSerializationContext.string());
+//    }
+
+
 
 
 }

@@ -5,23 +5,19 @@ import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.LoadBalancerClientFilter;
 import org.springframework.cloud.gateway.support.NotFoundException;
-import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
-import java.util.HashMap;
 import java.util.Map;
 
-import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR;
-import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_SCHEME_PREFIX_ATTR;
-import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.addOriginalRequestUrl;
+import static com.xiehua.filter.IpRateLimitGatewayFilter.ROUTE_RULES;
+import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.*;
 
 public class XiehuaLoadBalancerClientFilter extends LoadBalancerClientFilter {
 
-    public static final String CLIENT_VERSION = "version";
-
     private XiehuaRibbonLoadBalancerClient ribbonLoadBalancerClient;
+
 
     public XiehuaLoadBalancerClientFilter(XiehuaRibbonLoadBalancerClient ribbonLoadBalancerClient) {
         super(ribbonLoadBalancerClient);
@@ -36,17 +32,11 @@ public class XiehuaLoadBalancerClientFilter extends LoadBalancerClientFilter {
         if (url == null || (!"lb".equals(url.getScheme()) && !"lb".equals(schemePrefix))) return chain.filter(exchange);
         //preserve the original url
         addOriginalRequestUrl(exchange, url);
-        //version
-        String version = exchange.getRequest().getHeaders().getFirst(CLIENT_VERSION);
-        Map<String,String> map = new HashMap<>();
-        if(StringUtils.isEmpty(version)){
-            map.put(CLIENT_VERSION,"");
-        }else{
-            map.put(CLIENT_VERSION,version);
-        }
-        final ServiceInstance instance = ribbonLoadBalancerClient.choose(url.getHost(),map);
 
-        if (instance == null)  throw new NotFoundException("Unable to find instance for " + url.getHost());
+        Map<String,String> metadata = exchange.getAttribute(ROUTE_RULES);
+        final ServiceInstance instance = ribbonLoadBalancerClient.choose(url.getHost(), metadata);
+
+        if (instance == null) throw new NotFoundException("服务:"+ url.getHost() + "没有可用实例"+",metadata=>" + metadata);
 
         URI uri = exchange.getRequest().getURI();
 
@@ -110,5 +100,6 @@ public class XiehuaLoadBalancerClientFilter extends LoadBalancerClientFilter {
         }
 
     }
+
 
 }

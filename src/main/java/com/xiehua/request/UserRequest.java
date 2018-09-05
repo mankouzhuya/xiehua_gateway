@@ -2,7 +2,7 @@ package com.xiehua.request;
 
 import java.io.Serializable;
 
-public class RequestHeader implements Serializable{
+public class UserRequest implements Serializable{
 
 	/**
 	 * 
@@ -31,7 +31,7 @@ public class RequestHeader implements Serializable{
 	
 	
 
-	public RequestHeader() {
+	public UserRequest() {
 		// TODO Auto-generated constructor stub
 	}
 
@@ -120,17 +120,35 @@ public class RequestHeader implements Serializable{
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 
-		RequestHeader that = (RequestHeader) o;
+		UserRequest that = (UserRequest) o;
 
+		if (accept != null ? !accept.equals(that.accept) : that.accept != null) return false;
 		if (acceptEncoding != null ? !acceptEncoding.equals(that.acceptEncoding) : that.acceptEncoding != null)
 			return false;
-		return acceptLanguage != null ? acceptLanguage.equals(that.acceptLanguage) : that.acceptLanguage == null;
+		if (acceptLanguage != null ? !acceptLanguage.equals(that.acceptLanguage) : that.acceptLanguage != null)
+			return false;
+		if (cacheControl != null ? !cacheControl.equals(that.cacheControl) : that.cacheControl != null) return false;
+		if (connection != null ? !connection.equals(that.connection) : that.connection != null) return false;
+		if (cookie != null ? !cookie.equals(that.cookie) : that.cookie != null) return false;
+		if (host != null ? !host.equals(that.host) : that.host != null) return false;
+		if (upgradeInsecureRequests != null ? !upgradeInsecureRequests.equals(that.upgradeInsecureRequests) : that.upgradeInsecureRequests != null)
+			return false;
+		if (userAgent != null ? !userAgent.equals(that.userAgent) : that.userAgent != null) return false;
+		return referer != null ? referer.equals(that.referer) : that.referer == null;
 	}
 
 	@Override
 	public int hashCode() {
-		int result = acceptEncoding != null ? acceptEncoding.hashCode() : 0;
+		int result = accept != null ? accept.hashCode() : 0;
+		result = 31 * result + (acceptEncoding != null ? acceptEncoding.hashCode() : 0);
 		result = 31 * result + (acceptLanguage != null ? acceptLanguage.hashCode() : 0);
+		result = 31 * result + (cacheControl != null ? cacheControl.hashCode() : 0);
+		result = 31 * result + (connection != null ? connection.hashCode() : 0);
+		result = 31 * result + (cookie != null ? cookie.hashCode() : 0);
+		result = 31 * result + (host != null ? host.hashCode() : 0);
+		result = 31 * result + (upgradeInsecureRequests != null ? upgradeInsecureRequests.hashCode() : 0);
+		result = 31 * result + (userAgent != null ? userAgent.hashCode() : 0);
+		result = 31 * result + (referer != null ? referer.hashCode() : 0);
 		return result;
 	}
 }

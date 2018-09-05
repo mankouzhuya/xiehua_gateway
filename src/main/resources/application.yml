@@ -44,10 +44,10 @@ spring:
         charset: UTF-8
         force: true
   redis:
-      database: 4
-      host: 10.200.157.139
-      port: 6379
-      password: Zchzredis2017
+      database: 我是databases
+      host: 我是host
+      port: 我是端口
+      password: 我是密码
       lettuce:
         pool:
           max-active: 20

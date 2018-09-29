@@ -1,9 +1,10 @@
 package com.xiehua.filter;
 
 import com.google.common.collect.ImmutableSet;
-import com.xiehua.authentication.IPFilter;
+import com.xiehua.config.dto.CustomConfig;
 import es.moki.ratelimitj.core.limiter.request.RequestLimitRule;
-import es.moki.ratelimitj.redis.request.RedisSlidingWindowRequestRateLimiter;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.vavr.Tuple2;
 import lombok.AllArgsConstructor;
@@ -13,9 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.route.Route;
-import org.springframework.core.Ordered;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -26,27 +26,38 @@ import reactor.core.scheduler.Schedulers;
 import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.xiehua.converter.ServerHttpBearerAuthenticationConverter.GATEWAY_ATTR_JWT;
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.*;
 
 
 @Slf4j
 @Component
-public class IpRateLimitGatewayFilter implements GatewayFilter, Ordered {
+public class RouteFilter implements GatewayFilter, XiehuaOrdered {
 
-    public static final String GATEWAY_REQ_ID = "gateway:request:req_id_";
+    public static final String REDIS_GATEWAY_REQUEST_ID_PREFIX = "gateway:request:req_id_";//redis global request info
 
-    public static final String GATEWAY_RULE = "gateway:rules:service_";
+    public static final String REDIS_GATEWAY_SERVICE_RULE = "gateway:rules:service_";//redis service route rules
 
-    public static final String GATEWAY_RULE_DEFAULT ="default:default";
+    public static final String REDIS_GATEWAY_RULE_DEFAULT = "default:default";//default route rule
 
-    public static final String REQ_ID = "Request-ID";
+    public static final String REDIS_GATEWAY_LOGIN_PREFIX = "gateway:login:tid_";//redis login info( jwt claims),the key is claims.id
 
-    public static final String ROUTE_RULES = "route_rules";
+    public static final String REDIS_GATEWAY_ONLINE_PREFIX = "gateway:online:account_";//redis login info( jwt claims),the key is user account
+
+    public static final String GATEWAY_ATTR_ROUTE_RULES = "gateway_attr_route_rules";// gateway attr route rules
+
+    public static final String GATEWAY_ATTR_SERVER_NAME = "gateway_attr_server_name";//服务名字
+
+    public static final String HEAD_REQ_ID = "Request-ID";//global request id,write to request head
+
+    public static final String HEAD_REQ_JTI = "JTI";//claims.id,write to request head
 
     public static final Long EXP_TIME = 1000L;//过期时间
 
@@ -54,61 +65,30 @@ public class IpRateLimitGatewayFilter implements GatewayFilter, Ordered {
 
     static final Pattern schemePattern = Pattern.compile(SCHEME_REGEX);
 
-    public ImmutableSet<RequestLimitRule> rules = ImmutableSet.of(RequestLimitRule.of(1, TimeUnit.MINUTES, 10000));
-
-    //    @Autowired
-//    @Qualifier("redisPool")
-//    private GenericObjectPool<StatefulRedisConnection> pool;
-
-    @Autowired
-    private StatefulRedisConnection<String, String> connection;
-
     @Autowired
     private ReactiveRedisTemplate<String, String> template;
+
+    @Autowired
+    private CustomConfig customConfig;
 
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String ip = IPFilter.getIpAddr(exchange);
-        String serviceName = getServiceName(exchange);
-        return writeReqInfo2Redis(exchange).zipWith(new RedisSlidingWindowRequestRateLimiter(connection, rules).overLimitWhenIncrementedReactive(ip)).publishOn(Schedulers.elastic()).flatMap(s -> {
-            if (s.getT2()) {
-                log.warn("请求数超过阈值ip:{}", ip);
-                s.getT1().getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
-                return s.getT1().getResponse().setComplete();
-            } else {
-                ServerWebExchange webExchange = s.getT1();
-                webExchange.getAttributes().put(ROUTE_RULES, queryRouteInfo(exchange, serviceName));
-                return chain.filter(webExchange);
-            }
-        });
-
-
-        /**连接池的方式在高并发下有问题,现象:会导致http线程一直watting**/
-//        try {
-//            String ip = IPFilter.getIpAddr(exchange);
-//            StatefulRedisConnection<String, String> connection = pool.borrowObject();
-//            return  new RedisSlidingWindowRequestRateLimiter(connection, rules).overLimitWhenIncrementedReactive(ip).flatMap(s ->{
-//                if (s) {
-//                    log.warn("请求数超过阈值ip:{}", ip);
-//                    exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
-//                    return exchange.getResponse().setComplete();
-//                } else {
-//                    return chain.filter(exchange);
-//                }
-//            }).doFinally(t ->{
-//                pool.returnObject(connection);
-//            });
-//        } catch (Exception e) {
-//           log.error("IP限流器异常:{}",e);
-//        }
-
+         return Mono.just(exchange)
+                 .flatMap(s -> writeReqInfo2Redis(s))
+                 .publishOn(Schedulers.elastic())
+                 .map(t -> {
+                     String serviceName = getServiceName(exchange);
+                     t.getAttributes().put(GATEWAY_ATTR_SERVER_NAME, serviceName);
+                     t.getAttributes().put(GATEWAY_ATTR_ROUTE_RULES, queryRouteInfo(t, serviceName));
+                     return t;
+                 }).flatMap(m -> chain.filter(m));
     }
 
 
     @Override
     public int getOrder() {
-        return -1000;
+        return ROUTE_PRE_ORDER;
     }
 
     /**
@@ -138,10 +118,10 @@ public class IpRateLimitGatewayFilter implements GatewayFilter, Ordered {
      * override request head and put head into redis
      **/
     private Mono<ServerWebExchange> writeReqInfo2Redis(ServerWebExchange exchange) {
-        String str = exchange.getRequest().getHeaders().getFirst(REQ_ID);
+        String str = exchange.getRequest().getHeaders().getFirst(HEAD_REQ_ID);
         //check req id
         if (StringUtils.isEmpty(str)) return writeRedis(exchange);
-        return template.hasKey(GATEWAY_REQ_ID + str).flatMap(s -> {
+        return template.hasKey(REDIS_GATEWAY_REQUEST_ID_PREFIX + str).flatMap(s -> {
             if (s) {
                 return Mono.just(exchange);
             } else {
@@ -156,11 +136,37 @@ public class IpRateLimitGatewayFilter implements GatewayFilter, Ordered {
     private Mono<ServerWebExchange> writeRedis(ServerWebExchange exchange) {
         //put req id
         String reqId = UUID.randomUUID().toString().replace("-", "");
-        ServerHttpRequest request = exchange.getRequest().mutate().header(REQ_ID, reqId).build();
+        ServerHttpRequest.Builder builder = exchange.getRequest().mutate();
+        builder.header(HEAD_REQ_ID, reqId);
+        //check jwt attr
+        Claims claims = exchange.getAttribute(GATEWAY_ATTR_JWT);
+        LocalDateTime now = LocalDateTime.now();
+        if (claims != null) {
+            builder.header(HEAD_REQ_JTI, claims.getId());
+            LocalDateTime exp = claims.getExpiration().toInstant().atZone(ZoneOffset.systemDefault()).toLocalDateTime();
+            //访问退出登录接口
+            if (exchange.getRequest().getURI().getRawPath().contains("logout")) {
+                exp = LocalDateTime.now().plusMinutes(1);
+            }
+            //write jwt to redis
+            template.opsForHash()
+                    .putAll(REDIS_GATEWAY_LOGIN_PREFIX + claims.getId(), claims.entrySet().stream().map(s -> new Tuple2(s.getKey(), s.getValue().toString())).collect(Collectors.toMap(k -> k._1, v -> v._2, (x, y) -> y)))
+                    .then(template.expire(REDIS_GATEWAY_LOGIN_PREFIX + claims.getId(), Duration.between(now, exp)))
+                    .then(template.opsForValue().set(REDIS_GATEWAY_ONLINE_PREFIX + claims.getAudience(), claims.getId()))
+                    .then(template.expire(REDIS_GATEWAY_ONLINE_PREFIX + claims.getAudience(), Duration.between(now, exp)))
+                    .subscribe();
+            //update response
+            if (!exchange.getRequest().getURI().getRawPath().contains("logout")) {
+                claims.setExpiration(Date.from(LocalDateTime.now().plusSeconds(customConfig.getJwtExpiration()).atZone(ZoneId.systemDefault()).toInstant()));
+                exchange.getResponse().getHeaders().put(HttpHeaders.AUTHORIZATION, Arrays.asList(Jwts.builder().setClaims(claims).signWith(customConfig.getJwtSingKey()).compact()));
+            }
+        }
+
+        //build req
+        ServerHttpRequest request = builder.build();
         ServerWebExchange webExchange = exchange.mutate().request(request).response(exchange.getResponse()).build();
         //write req info to redis and set expire time for key 'req_id_xxx'
-        String key = GATEWAY_REQ_ID + reqId;
-        LocalDateTime now = LocalDateTime.now();
+        String key = REDIS_GATEWAY_REQUEST_ID_PREFIX + reqId;
         LocalDateTime end = now.plusSeconds(EXP_TIME);
         return template.opsForHash().putAll(key, readReq2Map(webExchange)).then(template.expire(key, Duration.between(now, end))).then(Mono.just(webExchange));
     }
@@ -187,8 +193,8 @@ public class IpRateLimitGatewayFilter implements GatewayFilter, Ordered {
             if (StringUtils.isEmpty(value)) return null;
             return field + ":" + value;
         }).filter(Objects::nonNull).collect(Collectors.toList());
-        if(list == null ||list.size() < 1) list.add(GATEWAY_RULE_DEFAULT);
-        return (Map<String, String>) template.opsForHash().multiGet(GATEWAY_RULE + serviceName, list).map(s -> {
+        if (list == null || list.size() < 1) list.add(REDIS_GATEWAY_RULE_DEFAULT);
+        return (Map<String, String>) template.opsForHash().multiGet(REDIS_GATEWAY_SERVICE_RULE + serviceName, list).map(s -> {
             List<String> strings = (List<String>) s;
             return strings.stream().map(m -> {
                 String[] temp = m.split(":");
@@ -196,7 +202,7 @@ public class IpRateLimitGatewayFilter implements GatewayFilter, Ordered {
                 return t;
             }).collect(Collectors.toMap(m -> m._1, n -> n._2, (x, y) -> y));
 
-        }).switchIfEmpty(Mono.error(new RuntimeException(serviceName + "路由规则未配置(redis)"))).block();
+        }).switchIfEmpty(Mono.error(new RuntimeException(serviceName + "路由规则未配置(redis)" + list.toString()))).block();
     }
 
 
@@ -229,4 +235,5 @@ public class IpRateLimitGatewayFilter implements GatewayFilter, Ordered {
             this.value = value;
         }
     }
+
 }

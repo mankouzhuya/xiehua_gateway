@@ -1,12 +1,9 @@
-package com.xiehua.controller;
+package com.xiehua.controller.web;
 
 import com.google.code.kaptcha.impl.DefaultKaptcha;
 import com.xiehua.config.dto.CustomConfig;
-import com.xiehua.controller.dto.AddRuleReqDTO;
-import com.xiehua.controller.dto.DeleteRuleReqDTO;
 import com.xiehua.controller.dto.LoginReqDTO;
 import com.xiehua.encrypt.aes.AESUtil;
-import com.xiehua.exception.BizException;
 import com.xiehua.service.GateWayService;
 import io.jsonwebtoken.Jwts;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,31 +39,20 @@ import java.util.Date;
 
 import static com.xiehua.converter.ServerHttpBearerAuthenticationConverter.BEARER;
 
+/**
+ * 网关web登录
+ * **/
 @Controller
-@RequestMapping("/gateway/service")
-public class GateWayController {
+@RequestMapping("/gateway/count")
+public class CountController {
 
     @Autowired
     private GateWayService gateWayService;
 
-
     @GetMapping("/index")
     public Mono<String> login(final Model model,@CookieValue(HttpHeaders.AUTHORIZATION) String authentication) {
-        model.addAttribute(gateWayService.index(authentication));
-        return Mono.create(monoSink -> monoSink.success("index"));
+        model.addAttribute(gateWayService.countIndexRespDTO(authentication));
+        return Mono.create(monoSink -> monoSink.success("count_index"));
     }
-
-    @PostMapping("/rule")
-    @ResponseBody
-    public Mono<Boolean> addRule(@Validated @RequestBody AddRuleReqDTO addRuleReqDTO) {
-        return gateWayService.addRule(addRuleReqDTO);
-    }
-
-    @PostMapping("/rule_d")
-    @ResponseBody
-    public Mono<Long> deleteRule(@Validated @RequestBody DeleteRuleReqDTO deleteRuleReqDTO) {
-        return gateWayService.deleteRule(deleteRuleReqDTO);
-    }
-
 
 }

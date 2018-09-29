@@ -9,7 +9,7 @@
 	<modules>
 
 	</modules>
-	<packaging>pom</packaging>
+	<packaging>jar</packaging>
 
 	<name>xiehua_gateway</name>
 	<description>Demo project for Spring Boot</description>
@@ -196,14 +196,20 @@
 		</dependencies>
 	</dependencyManagement>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
-	</build>
+
+    <build>
+        <!-- 打成jar包的名称 -->
+        <finalName>xiehua_gateway</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+
+
+
+    </build>
 
 
 </project>

@@ -1,11 +1,13 @@
 package com.xiehua.config.dto.jwt;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 
+@Data
 public class JwtUser implements UserDetails {
     /**
      *
@@ -14,9 +16,11 @@ public class JwtUser implements UserDetails {
 
     private final String gid;//全局id(ssoId)
 
-    private final String account;
+    private final String account;//账号
 
     private final String password;
+
+    private final String issue;//签发者
 
     private final Collection<? extends GrantedAuthority> authorities;
 
@@ -24,10 +28,12 @@ public class JwtUser implements UserDetails {
             String gid,
             String account,
             String password,
+            String issue,
             Collection<? extends GrantedAuthority> authorities) {
         this.gid = gid;
         this.account = account;
         this.password = password;
+        this.issue = issue;
         this.authorities = authorities;
     }
 
@@ -71,13 +77,6 @@ public class JwtUser implements UserDetails {
         return true;
     }
 
-    public String getGid() {
-        return gid;
-    }
-
-    public String getAccount() {
-        return account;
-    }
 
 
 	

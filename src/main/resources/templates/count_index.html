@@ -14,7 +14,7 @@
 <div class="container">
     <h3 class="card-title">&nbsp;</h3>
     <h3 class="card-title text-center">携华网关服务列表</h3>
-    <h6 class="card-title text-right">欢迎你:&nbsp;<span th:text="${indexRespDTO.userName}"></span></h6>
+    <h6 class="card-title text-right">欢迎你:&nbsp;<span th:text="${countIndexRespDTO.userName}"></span></h6>
     <h6 class="card-title text-right"><button type="button" class="btn btn-danger online_count" onclick="online_count()">当前在线人数统计</button></h6>
     <div class="row">
         <div class="col-md-4"></div>
@@ -75,39 +75,22 @@
             </form>
         </div>
     </nav>
-    <div th:each="service : ${indexRespDTO.serviceList}" style="margin-top: 1em">
-        <div class="list-group">
-            <a href="#" class="list-group-item active">
-                <h5 class="list-group-item-heading">服务名称:&nbsp;<span th:text ="${service.serviceName}"></span> <span style="float: right" th:onclick="'javascript:addRules(\''+${service.serviceName}+'\')' ">添加规则</span></h5>
-            </a>
-            <a href="#" class="list-group-item">
-                <h6 class="list-group-item-heading">路由规则</h6>
-                <table class="table">
-                    <thead>
-                    <tr>
-                        <th scope="col">编号</th>
-                        <th scope="col">客户端key</th>
-                        <th scope="col">客户端value</th>
-                        <th scope="col">路由到</th>
-                        <th scope="col">服务端key</th>
-                        <th scope="col">服务端value</th>
-                        <th scope="col">操作</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:with="client=${#strings.arraySplit(role.clientKey,';')}" th:each="role, roleStat:${service.roles}" >
-                        <th scope="row" th:text ="${roleStat.count}"></th>
-                        <td th:text="${role.clientKey}"></td>
-                        <td th:text="${role.clientValue}"></td>
-                        <td>-></td>
-                        <td th:text="${role.serverKey}"></td>
-                        <td th:text="${role.serverValue}"></td>
-                        <td><button type="button" class="btn btn-danger" th:onclick="'javascript:delRules(\''+${service.serviceName}+'\',\''+${role.clientKey}+'\',\''+${role.clientValue}+'\')' ">删除</button></td>
-                    </tr>
-                    </tbody>
-                </table>
-            </a>
-        </div>
+
+    <div style="margin-top: 1em">
+        <table class="table">
+            <thead>
+            <tr>
+                <!---<th scope="col">id</th>-->
+                <th scope="col">content</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="list : ${countIndexRespDTO.list}">
+                <!--<th th:text ="${list.id}" scope="row"></th>--->
+                <td th:text ="${list.msg}" ></td>
+            </tr>
+            </tbody>
+        </table>
     </div>
 
     <!-- add rule modal -->

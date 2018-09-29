@@ -58,7 +58,7 @@ public class IPFilter implements WebFilter {
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        if (logger.isDebugEnabled()) logger.debug("收到请求:{}", exchange.getRequest().getURI().toString());
+//        if (logger.isDebugEnabled()) logger.debug("收到请求:{}", exchange.getRequest().getURI().toString());
         //OPTIONS 请求不处理
         if (exchange.getRequest().getMethod().equals(HttpMethod.OPTIONS)) return exchange.getResponse().setComplete();
         //permit all url
@@ -79,7 +79,7 @@ public class IPFilter implements WebFilter {
                 .flatMap(m -> {
                     if (m) {
                         List<GrantedAuthority> list = Arrays.asList(CustomConfig.SecurityRoleEnum.role_inner_protected.getFullRole()).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
-                        UserDetails userDetails = new JwtUser("xiehua_gid", "xiehua_account", "xiehua_pwd", list);
+                        UserDetails userDetails = new JwtUser("xiehua_gid", "xiehua_account", "xiehua_pwd","xiehua_gateway", list);
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, "xiehua_gid", userDetails.getAuthorities());
                         SecurityContextImpl securityContext = new SecurityContextImpl();
                         securityContext.setAuthentication(authentication);

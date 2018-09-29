@@ -1,6 +1,7 @@
 package com.xiehua.support.lb.filter;
 
 import com.xiehua.support.lb.ribbon.XiehuaRibbonLoadBalancerClient;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.LoadBalancerClientFilter;
@@ -11,9 +12,10 @@ import reactor.core.publisher.Mono;
 import java.net.URI;
 import java.util.Map;
 
-import static com.xiehua.filter.IpRateLimitGatewayFilter.ROUTE_RULES;
+import static com.xiehua.filter.RouteFilter.GATEWAY_ATTR_ROUTE_RULES;
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.*;
 
+@Slf4j
 public class XiehuaLoadBalancerClientFilter extends LoadBalancerClientFilter {
 
     private XiehuaRibbonLoadBalancerClient ribbonLoadBalancerClient;
@@ -33,10 +35,14 @@ public class XiehuaLoadBalancerClientFilter extends LoadBalancerClientFilter {
         //preserve the original url
         addOriginalRequestUrl(exchange, url);
 
-        Map<String,String> metadata = exchange.getAttribute(ROUTE_RULES);
+        Map<String, String> metadata = exchange.getAttribute(GATEWAY_ATTR_ROUTE_RULES);
         final ServiceInstance instance = ribbonLoadBalancerClient.choose(url.getHost(), metadata);
 
-        if (instance == null) throw new NotFoundException("服务:"+ url.getHost() + "没有可用实例"+",metadata=>" + metadata);
+        if (instance == null) {
+            log.error("服务不可用:" + url.getHost() + "没有可用实例" + ",metadata=>" + metadata);
+            throw new NotFoundException("服务:" + url.getHost() + "没有可用实例" + ",metadata=>" + metadata);
+        }
+        ;
 
         URI uri = exchange.getRequest().getURI();
 

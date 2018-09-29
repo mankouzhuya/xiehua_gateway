@@ -59,15 +59,20 @@ public class GateWaySecurity {
         //protect api url
         List<String> protectUrls = Optional.ofNullable(customConfig.getWhiteListPermits()).orElseThrow(RuntimeException::new).stream().map(s -> s.getUrl()).collect(Collectors.toList());
 
-        return http.authorizeExchange()
+        return http
+                .csrf().disable()
+                .httpBasic().disable()
+                .authorizeExchange()
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .pathMatchers(permitUrls.toArray(new String[permitUrls.size()])).permitAll()
                 .pathMatchers(protectUrls.toArray(new String[protectUrls.size()])).hasRole(CustomConfig.SecurityRoleEnum.role_inner_protected.getRole())
                 .pathMatchers("/gateway/**").hasRole("GATEWAY_ADMIN")//网关登录配置角色
                 .pathMatchers("/order_center/private_sleep/**").hasRole("ADMIN")
                 .anyExchange().authenticated()
+//                .and()
+//                .formLogin()
+//                .loginPage("/gateway/login")
                 .and()
-                .csrf().disable()
                 .addFilterAt(new IPFilter(customConfig), SecurityWebFiltersOrder.FIRST)
                 .addFilterAt(new JwtAuthenticationFilter(customConfig, converter), SecurityWebFiltersOrder.HTTP_BASIC)
                 .build();

@@ -44,10 +44,10 @@ spring:
         charset: UTF-8
         force: true
   redis:
-      database: 我是databases
-      host: 我是host
-      port: 我是端口
-      password: 我是密码
+      database: *
+      host: *
+      port: *
+      password: *
       lettuce:
         pool:
           max-active: 20
@@ -95,21 +95,22 @@ management:
 #jwt配置
 jwt:
   secret: jFCOdJy2Av4PkEPoQj0JGSyBlSbOz7YaGP+NlQVjhlg=
-  expiration: 604800   #7day 过期
+  expiration: 604800   #7day 过期,单位秒
+  domain: localhost #设置cookie时候用
 
 #不需要权限验证的地址
 security:
   permitUrl: '[
               {"name":"网关登录","url":"/gateway/login"},
               {"name":"网关登录","url":"/gateway/login/**"},
-              {"name":"调用失败","url":"/fallback/**"},
-              {"name":"订单测试1","url":"/order_center/public/**"}
+              {"name":"调用失败(服务降级)","url":"/fallback/**"}
               ]'
 
 #ip白名单
 whiteList:
   permit: '[
-            {"name":"订单测试2","url":"/order_center/protected/**","ip":["127.0.0.1","127.0.0.2"]},
-            {"name":"产品","url":"/pay_center/**","ip":["127.0.0.1","127.0.0.2"]}
+            {"name":"订单","url":"/order_center111/**","ip":["127.0.0.1"]},
+            {"name":"支付","url":"/pay_center/**","ip":["127.0.0.1"]},
+            {"name":"网关内部服务","url":"/gateway/api/**","ip":["127.0.0.1"]}
             ]'
 

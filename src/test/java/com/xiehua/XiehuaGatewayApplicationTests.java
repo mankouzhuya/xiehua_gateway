@@ -7,6 +7,7 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.support.ConnectionPoolSupport;
+import io.vavr.Tuple2;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.junit.Test;
@@ -184,6 +185,7 @@ public class XiehuaGatewayApplicationTests {
             commands.set("key", "value");
             commands.set("key2", "value2");
             commands.exec();
+
         }
 
 // terminating
@@ -218,7 +220,7 @@ public class XiehuaGatewayApplicationTests {
         System.out.println(key_a);
         //RAS
         KeyPair keyPair = Keys.keyPairFor(SignatureAlgorithm.RS512);
-        System.out.println(keyPair.getPublic().getEncoded());
+       // System.out.println(keyPair.getPublic().getEncoded());
 
         byte[] keyBytes = Base64.getDecoder().decode("jFCOdJy2Av4PkEPoQj0JGSyBlSbOz7YaGP+NlQVjhlg=");
         SecretKey key2 = Keys.hmacShaKeyFor(keyBytes);
@@ -227,18 +229,42 @@ public class XiehuaGatewayApplicationTests {
 
         String jws2 = Jwts.builder()
                 .setIssuer("xiehua_gateway")//签发者
-                .setSubject("test01")//所面向的用户
-                .setAudience("user_name")//接收jwt的一方
+                .setSubject("test01")//所面向的用户 gid
+                .setAudience("user_name")//接收jwt的一方 account
                 .setExpiration(Date.from(LocalDateTime.now().plusDays(10).atZone(ZoneId.systemDefault()).toInstant())) //jwt的过期时间，这个过期时间必须大于签发时间  Date.from(LocalDateTime.now().plusMinutes(30).atZone(ZoneId.systemDefault()).toInstant())
                 .setNotBefore(new Date()) //jwt不可用时间
                 .setIssuedAt(new Date()) // 签发时间
                 .setId(UUID.randomUUID().toString()).signWith(key2).compact(); //just an example id
         System.out.println(jws2);
        // String jws2 = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ4aWVodWFfZ2F0ZXdheSIsInN1YiI6ImdpZCIsImF1ZCI6InVzZXJfbmFtZSIsImV4cCI6MTUzMzc4NjI3OCwibmJmIjoxNTMzNzg0NDc4LCJpYXQiOjE1MzM3ODQ0NzgsImp0aSI6IjBmYjk4ZTRhLWQ0MTUtNDY4NS05N2IzLTkwOTQwY2Y5ZDdhZCJ9.cp1ar5kRWraMDWlSSBq6Nb7fzK4O_KeFNCdch_0-si4";
-        System.out.println(Jwts.parser().setSigningKey(key2).parseClaimsJws(jws2).getBody().getExpiration());
+        //System.out.println(Jwts.parser().setSigningKey(key2).parseClaimsJws(jws2).getBody().getExpiration());
+       // String a = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ4aWVodWFfZ2F0ZXdheSIsInN1YiI6InRlc3QwMSIsImF1ZCI6InVzZXJfbmFtZSIsImV4cCI6MTUzNzc3NTMyMywibmJmIjoxNTM2OTExMzIzLCJpYXQiOjE1MzY5MTEzMjMsImp0aSI6ImRhNDg3ZTBiLWViODAtNDY2NS05NzZmLTJmZTgzMTM2OTYzNSJ9.rUBGjxfqzFq-8q6u7LfsgLndfJa5eedRSNZD4iqrBmA";
+        //System.out.println(Jwts.builder().setClaims(Jwts.parser().setSigningKey(key2).parseClaimsJws(a).getBody()).signWith(key2).compact());
+
+       // System.out.println(LocalDateTime.now().plusDays(1));
+
+    }
+
+    @Test
+    public void getStatefulRedisConnection() throws Exception{
+        String uri = new StringBuffer().append(REDIS_PROTOCOL).append("Zchzredis2017").append("@").append("10.200.157.139").append(":").append("6379").append("/").append(4).toString();
+        RedisClient client = RedisClient.create(uri);
+        StatefulRedisConnection<String, String> connection = client.connect();
+        String serviceName = "ORDER-CENTER";
+        List<String> list = new ArrayList<>();
+        list.add("version:2");
+        while (true){
+            Map<String,String> map = connection.sync().hmget(REDIS_GATEWAY_SERVICE_RULE + serviceName,list.toArray(new String[list.size()])).stream().map(s ->{
+                String value = s.getValue();
+                String[] temp = s.getValue().split(":");
+                Tuple2<String,String> t = new Tuple2(temp[0],temp[1]);
+                return t;
+            }).collect(Collectors.toMap(s -> s._1, t -> t._2,(x, y) -> y));
+            System.out.println(map);
+            Thread.sleep(600);
+        }
 
 
-        System.out.println(LocalDateTime.now().plusDays(1));
 
     }
 

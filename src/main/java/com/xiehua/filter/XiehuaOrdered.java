@@ -8,10 +8,10 @@ public interface XiehuaOrdered extends Ordered {
 
     int RATE_LIMIT_CPU_ORDER = 10;
 
-    int RATE_LIMIT_IP_ORDER = 11;
+    int RATE_LIMIT_IP_ORDER = 30;
 
     int ROUTE_PRE_ORDER = 20;
 
-    int TRACK_ORDER = 30;
+    int TRACK_ORDER = 40;
 
 }

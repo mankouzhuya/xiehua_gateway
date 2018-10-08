@@ -37,6 +37,8 @@ public class TrackFilter implements GatewayFilter, XiehuaOrdered {
 
     public static final String REDIS_GATEWAY_TRACK = "gateway:track:req_";//redis track
 
+    public static final Long EXP_SECONDS = 60 * 5L;//过期时间(5分钟)
+
     @Autowired
     private StatefulRedisConnection<String, String> connection;
 
@@ -45,7 +47,7 @@ public class TrackFilter implements GatewayFilter, XiehuaOrdered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        return Mono.justOrEmpty(exchange).publishOn(Schedulers.elastic()).flatMap(Try.of(s -> {
+        return Mono.justOrEmpty(exchange).flatMap(Try.of(s -> {
             String traceId = exchange.getRequest().getHeaders().getFirst(HEAD_REQ_ID);
             if (StringUtils.isEmpty(traceId)) return chain.filter(exchange);
             String spanId = exchange.getAttribute(GATEWAY_ATTR_REQ_TERM_ID);
@@ -66,6 +68,7 @@ public class TrackFilter implements GatewayFilter, XiehuaOrdered {
         RedisCommands<String, String> commands = syncCommands();
         if (commands.exists(key) == 0) {//不存在
             commands.set(key, mapper.writeValueAsString(currentSpan));
+            commands.expire(key,EXP_SECONDS);
             return chain.filter(exchange);
         }
         //存在
@@ -73,6 +76,7 @@ public class TrackFilter implements GatewayFilter, XiehuaOrdered {
         });
         span.addChild(currentSpan);
         commands.set(key, mapper.writeValueAsString(span));
+        commands.expire(key,EXP_SECONDS);
         return chain.filter(exchange);
     }
 
@@ -80,12 +84,14 @@ public class TrackFilter implements GatewayFilter, XiehuaOrdered {
         RedisAsyncCommands<String, String> commands = asyncCommands();
         if (commands.exists(key).get() == 0) {//不存在
             commands.set(key, mapper.writeValueAsString(currentSpan));
+            commands.expire(key,EXP_SECONDS);
             return chain.filter(exchange);
         }
         //存在
         Span span = mapper.readValue(commands.get(key).get(), new TypeReference<Span>() { });
         span.addChild(currentSpan);
         commands.set(key, mapper.writeValueAsString(span));
+        commands.expire(key,EXP_SECONDS);
         return chain.filter(exchange);
     }
 

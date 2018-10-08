@@ -5,9 +5,9 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.support.ConnectionPoolSupport;
-import io.vavr.Tuple2;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.junit.Test;
@@ -28,10 +28,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static com.xiehua.config.RedisConfiguration.REDIS_PROTOCOL;
-import static com.xiehua.filter.RouteFilter.REDIS_GATEWAY_SERVICE_RULE;
 
 //@RunWith(SpringRunner.class)
 //@SpringBootTest
@@ -246,24 +244,23 @@ public class XiehuaGatewayApplicationTests {
     }
 
     @Test
-    public void getStatefulRedisConnection() throws Exception{
+    public void getStatefulRedisConnection() throws Exception {
         String uri = new StringBuffer().append(REDIS_PROTOCOL).append("Zchzredis2017").append("@").append("10.200.157.139").append(":").append("6379").append("/").append(4).toString();
         RedisClient client = RedisClient.create(uri);
         StatefulRedisConnection<String, String> connection = client.connect();
         String serviceName = "ORDER-CENTER";
         List<String> list = new ArrayList<>();
         list.add("version:2");
-        while (true){
-            Map<String,String> map = connection.sync().hmget(REDIS_GATEWAY_SERVICE_RULE + serviceName,list.toArray(new String[list.size()])).stream().map(s ->{
-                String value = s.getValue();
-                String[] temp = s.getValue().split(":");
-                Tuple2<String,String> t = new Tuple2(temp[0],temp[1]);
-                return t;
-            }).collect(Collectors.toMap(s -> s._1, t -> t._2,(x, y) -> y));
-            System.out.println(map);
-            Thread.sleep(600);
-        }
-
+//        while (true){
+//            Map<String,String> map = connection.sync().hmget(REDIS_GATEWAY_SERVICE_RULE + serviceName,list.toArray(new String[list.size()])).stream().map(s ->{
+//                String value = s.getValue();
+//                String[] temp = s.getValue().split(":");
+//                Tuple2<String,String> t = new Tuple2(temp[0],temp[1]);
+//                return t;
+//            }).collect(Collectors.toMap(s -> s._1, t -> t._2,(x, y) -> y));
+//            System.out.println(map);
+//            Thread.sleep(600);
+//        }
 
 
     }

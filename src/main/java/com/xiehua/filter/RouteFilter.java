@@ -59,7 +59,7 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
 
     public static final String HEAD_REQ_JTI = "JTI";//claims.id,write to request head
 
-    public static final Long EXP_TIME = 1000L;//过期时间
+    public static final Long EXP_TIME = 60 * 1L;//过期时间（1分钟）
 
     private static final String SCHEME_REGEX = "[a-zA-Z]([a-zA-Z]|\\d|\\+|\\.|-)*:.*";
 

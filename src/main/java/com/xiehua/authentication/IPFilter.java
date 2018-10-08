@@ -94,7 +94,7 @@ public class IPFilter implements WebFilter {
      * get ip address from server web exchange
      **/
     public static String getIpAddr(ServerWebExchange exchange) {
-        if (exchange == null) throw new RuntimeException("getIpAddr method ServerWebExchange Object is null");
+        if (exchange == null) throw new NullPointerException("getIpAddr method ServerWebExchange Object is null");
         String ipString = exchange.getRequest().getHeaders().getFirst("x-forwarded-for");
         if (StringUtils.isBlank(ipString) || "unknown".equalsIgnoreCase(ipString)) {
             ipString = exchange.getRequest().getHeaders().getFirst("Proxy-Client-IP");

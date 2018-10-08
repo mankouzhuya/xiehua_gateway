@@ -37,7 +37,7 @@ public class CounterFilter implements GlobalFilter, XiehuaOrdered {
 
     public static DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private static final Integer DEFAULT_TIMER=  100;//接口耗时时长
+    private static final Integer DEFAULT_TIMER=  2000;//接口耗时时长（2秒钟）
 
     @Autowired
     private ReactiveRedisTemplate<String, String> template;

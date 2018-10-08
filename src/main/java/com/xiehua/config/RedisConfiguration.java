@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiehua.config.dto.redis.GUser;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.resource.ClientResources;
+import io.lettuce.core.resource.DefaultClientResources;
 import io.lettuce.core.support.ConnectionPoolSupport;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
@@ -60,8 +62,12 @@ public class RedisConfiguration {
 //
     @Bean
     public StatefulRedisConnection<String,String> getStatefulRedisConnection(){
+        ClientResources res = DefaultClientResources.builder()
+                .ioThreadPoolSize(4)
+                .computationThreadPoolSize(4)
+                .build();
         String uri = new StringBuffer().append(REDIS_PROTOCOL).append(password).append("@").append(host).append(":").append(port).append("/").append(database).toString();
-        RedisClient client = RedisClient.create(uri);
+        RedisClient client = RedisClient.create(res,uri);
         return client.connect();
     }
 

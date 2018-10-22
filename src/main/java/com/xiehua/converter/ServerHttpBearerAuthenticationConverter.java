@@ -23,7 +23,7 @@ import com.xiehua.component.SpringComponent;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.dto.jwt.JwtUser;
 import com.xiehua.exception.BizException;
-import com.xiehua.filter.RateLimitIpFilter;
+import com.xiehua.filter.RouteFilter;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import org.slf4j.Logger;
@@ -85,7 +85,7 @@ public class ServerHttpBearerAuthenticationConverter implements Function<ServerW
     private SpringComponent component;
 
     @Autowired
-    private RateLimitIpFilter filter;
+    private RouteFilter filter;
 
     /**
      * Apply this function to the current WebExchange, an Authentication object

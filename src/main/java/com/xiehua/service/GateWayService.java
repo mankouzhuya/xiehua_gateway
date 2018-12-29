@@ -1,16 +1,23 @@
 package com.xiehua.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xiehua.cache.dto.SimpleKvDTO;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.dto.jwt.JwtUser;
 import com.xiehua.controller.dto.*;
 import com.xiehua.filter.RateLimitIpFilter;
+import com.xiehua.pub_sub.redis.dto.XiehuaMessage;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.route.RouteLocator;
+import org.springframework.data.redis.core.ReactiveHashOperations;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import reactor.core.publisher.Mono;
@@ -22,9 +29,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.xiehua.cache.DefaultCache.REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC;
 import static com.xiehua.converter.ServerHttpBearerAuthenticationConverter.REDIS_GATEWAY_USER_POWER_PREFIX;
 import static com.xiehua.filter.RouteFilter.*;
 import static com.xiehua.filter.g.CounterFilter.REDIS_GATEWAY_TIMER_REQID_PREFIX;
+import static com.xiehua.pub_sub.redis.dto.XiehuaMessage.*;
 
 
 @Service
@@ -39,10 +48,16 @@ public class GateWayService {
     private ReactiveRedisTemplate<String, String> template;
 
     @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
     private RouteLocator routeLocator;
 
     @Autowired
     private RateLimitIpFilter filter;
+
+    @Autowired
+    private ObjectMapper mapper;
 
     /**
      * 首页->登录用户,服务列表,路由信息
@@ -68,17 +83,74 @@ public class GateWayService {
     }
 
     /**
-     * 添加路由规则
+     * 路由规则---------->添加路由规则
      **/
     public Mono<Boolean> addRule(@Validated @RequestBody AddRuleReqDTO addRuleReqDTO) {
-        return template.opsForHash().put(REDIS_GATEWAY_SERVICE_RULE + addRuleReqDTO.getService(), addRuleReqDTO.getKey(), addRuleReqDTO.getValue());
+        return template.opsForHash().put(REDIS_GATEWAY_SERVICE_RULE + addRuleReqDTO.getService(), addRuleReqDTO.getKey(), addRuleReqDTO.getValue())
+                .publishOn(Schedulers.elastic())
+                .then(Mono.fromRunnable(() -> {
+                    try {
+                        notifyUpdateRule(addRuleReqDTO.getService());
+                    } catch (JsonProcessingException e) {
+                        log.error("路由规则---------->删除路由规则 service:{},堆栈:{}", addRuleReqDTO.getService(), e);
+                    }
+                }));//notify update local cache
     }
 
     /**
-     * 删除路由规则
+     * 路由规则(其中的一个一条)---------->删除路由规则
      **/
     public Mono<Long> deleteRule(@Validated @RequestBody DeleteRuleReqDTO deleteRuleReqDTO) {
-        return template.opsForHash().remove(REDIS_GATEWAY_SERVICE_RULE + deleteRuleReqDTO.getService(), deleteRuleReqDTO.getKey());
+        return template.opsForHash().remove(REDIS_GATEWAY_SERVICE_RULE + deleteRuleReqDTO.getService(), deleteRuleReqDTO.getKey())
+                .publishOn(Schedulers.elastic())
+                .then(Mono.fromRunnable(() -> {
+                    try {
+                        notifyUpdateRule(deleteRuleReqDTO.getService());
+                    } catch (JsonProcessingException e) {
+                        log.error("路由规则---------->删除路由规则 service:{},堆栈:{}", deleteRuleReqDTO.getService(), e);
+                    }
+                }));//notify update local cache
+    }
+
+    /**
+     * 路由规则(全部删除)---------->删除路由规则
+     **/
+    public Mono<Long> deleteRule(String serviceId) {
+        return template.opsForHash().delete(serviceId)
+                .publishOn(Schedulers.elastic())
+                .then(Mono.fromRunnable(() -> {
+                    try {
+                        stringRedisTemplate.convertAndSend(REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC, mapper.writeValueAsString(new XiehuaMessage(TYPE_DELETE_RULE, serviceId)));
+                    } catch (JsonProcessingException e) {
+                        log.error("路由规则---------->删除路由规则 service:{},堆栈:{}", serviceId, e);
+                    }
+                }));//notify delete local cache
+    }
+
+    private void notifyUpdateRule(String service) throws JsonProcessingException {
+        //query redis
+        ReactiveHashOperations<String,String,String> opsForHash = template.opsForHash();
+        List<SimpleKvDTO> rules = opsForHash.entries(service).map(s->{
+            SimpleKvDTO dto = new SimpleKvDTO();
+            dto.setKey(s.getKey());
+            dto.setValue(s.getValue());
+            return dto;
+        }).collectList().block();
+
+        AddRule2ReqDTO addRule2ReqDTO = new AddRule2ReqDTO();
+        addRule2ReqDTO.setRules(rules);
+        addRule2ReqDTO.setService(service);
+
+        if(CollectionUtils.isEmpty(rules)) return;
+        stringRedisTemplate.convertAndSend(REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC, mapper.writeValueAsString(new XiehuaMessage(TYPE_UPDATE_RULE, mapper.writeValueAsString(addRule2ReqDTO))));
+    }
+
+
+    /**
+     * 清空本地缓存
+     * **/
+    public void clearLocalCache() throws JsonProcessingException {
+        stringRedisTemplate.convertAndSend(REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC,mapper.writeValueAsString(new XiehuaMessage(TYPE_CLEAR_ALL, "clear all cache")));
     }
 
     /**
@@ -105,7 +177,7 @@ public class GateWayService {
     }
 
     /**
-     * 查询用户权限
+     * 用户------>查询用户权限
      **/
     public Mono<UserPermissionsRespDTO> getUserPermissionsList(@NotBlank(message = "用户账号account不能为空") String account) {
         return template.opsForHash().entries(REDIS_GATEWAY_USER_POWER_PREFIX + account).map(s -> {
@@ -119,19 +191,35 @@ public class GateWayService {
     }
 
     /**
-     * 添加用户权限(存在即更新,全量替换)
+     * 用户------>添加用户权限(存在即更新,全量替换)
      * 注意:次接口是全量替换用户对应系统的权限标识,故调用的时候一定要传用户在对应系统的全部权限标识
      **/
-    public Mono<Void> addPermissions(@Validated AddPermissionsReqDTO addPermissionsReqDTO) {
-        return template.opsForHash().put(REDIS_GATEWAY_USER_POWER_PREFIX + addPermissionsReqDTO.getAccount(), addPermissionsReqDTO.getSys(), String.join(",", addPermissionsReqDTO.getPermissions())).thenEmpty(Mono.empty());
+    public Mono<Void> addOrUpdatePermissions(@Validated AddPermissionsReqDTO addPermissionsReqDTO) {
+        return template.opsForHash().put(REDIS_GATEWAY_USER_POWER_PREFIX + addPermissionsReqDTO.getAccount(), addPermissionsReqDTO.getSys(), String.join(",", addPermissionsReqDTO.getPermissions()))
+                .publishOn(Schedulers.elastic())
+                .then(Mono.fromRunnable(() -> {
+                    try {
+                        stringRedisTemplate.convertAndSend(REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC, mapper.writeValueAsString(new XiehuaMessage(TYPE_UPDATE_USER_INFO, mapper.writeValueAsString(addPermissionsReqDTO))));
+                    } catch (JsonProcessingException e) {
+                        log.error("用户------>添加用户权限(存在即更新,全量替换)失败addPermissionsReqDTO:{},堆栈:{}",addPermissionsReqDTO.toString(),e);
+                    }
+                }));//notify update local cache
+
     }
 
     /**
-     * 添加用户权限(存在即更新,全量替换)
-     * 注意:次接口是全量替换用户对应系统的权限标识,故调用的时候一定要传用户在对应系统的全部权限标识
+     * 用户------>删除用户
      **/
-    public Mono<Void> addPermissions(@Validated AddPermissionsReq2DTO addPermissionsReqDTO) {
-        return template.opsForHash().put(REDIS_GATEWAY_USER_POWER_PREFIX + addPermissionsReqDTO.getAccount(), addPermissionsReqDTO.getSys(), addPermissionsReqDTO.getPermissions()).thenEmpty(Mono.empty());
+    public Mono<Void> deleteUser(@NotBlank(message = "用户账号account不能为空") String account) {
+        return template.delete(REDIS_GATEWAY_USER_POWER_PREFIX + account)
+                .publishOn(Schedulers.elastic())
+                .then(Mono.fromRunnable(() -> {
+                    try {
+                        stringRedisTemplate.convertAndSend(REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC, mapper.writeValueAsString(new XiehuaMessage(TYPE_DELETE_USER_INFO, account)));
+                    } catch (JsonProcessingException e) {
+                        log.error("用户------>添加用户权限(存在即更新,全量替换)account:{},堆栈:{}",account,e);
+                    }
+                }));//notify delete local cache
     }
 
     /**

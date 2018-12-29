@@ -32,7 +32,15 @@ public class UserController {
      * 注意:次接口是全量替换用户对应系统的权限标识,故调用的时候一定要传用户在对应系统的全部权限标识
      **/
     @PostMapping("/user/permissions")
-    public Mono<Void> addPermissions(@Validated @RequestBody AddPermissionsReqDTO addPermissionsReqDTO){
-        return gateWayService.addPermissions(addPermissionsReqDTO);
+    public Mono<Void> addOrUpdatePermissions(@Validated @RequestBody AddPermissionsReqDTO addPermissionsReqDTO){
+        return gateWayService.addOrUpdatePermissions(addPermissionsReqDTO);
+    }
+
+    /**
+     * 用户------>删除用户
+     **/
+    @DeleteMapping("/user/permissions")
+    public Mono<Void> deleteUser(@RequestParam String account){
+        return gateWayService.deleteUser(account);
     }
 }

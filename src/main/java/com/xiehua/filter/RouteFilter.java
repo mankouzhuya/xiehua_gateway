@@ -1,11 +1,14 @@
 package com.xiehua.filter;
 
-import com.google.common.collect.ImmutableSet;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xiehua.cache.SimpleCache;
+import com.xiehua.cache.dto.SimpleKvDTO;
 import com.xiehua.config.dto.CustomConfig;
-import es.moki.ratelimitj.core.limiter.request.RequestLimitRule;
+import com.xiehua.exception.BizException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.lettuce.core.api.StatefulRedisConnection;
 import io.vavr.Tuple2;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,22 +17,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.route.Route;
+import org.springframework.data.redis.core.ReactiveHashOperations;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -69,20 +74,27 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
     private ReactiveRedisTemplate<String, String> template;
 
     @Autowired
+    private ObjectMapper mapper;
+
+    @Autowired
+    private SimpleCache defaultCache;
+
+
+    @Autowired
     private CustomConfig customConfig;
 
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-         return Mono.just(exchange)
-                 .flatMap(s -> writeReqInfo2Redis(s))
-                 .publishOn(Schedulers.elastic())
-                 .map(t -> {
-                     String serviceName = getServiceName(exchange);
-                     t.getAttributes().put(GATEWAY_ATTR_SERVER_NAME, serviceName);
-                     t.getAttributes().put(GATEWAY_ATTR_ROUTE_RULES, queryRouteInfo(t, serviceName));
-                     return t;
-                 }).flatMap(m -> chain.filter(m));
+        return Mono.just(exchange)
+                .flatMap(s -> writeReqInfo2Redis(s))
+                .publishOn(Schedulers.elastic())
+                .map(t -> {
+                    String serviceName = getServiceName(exchange);
+                    t.getAttributes().put(GATEWAY_ATTR_SERVER_NAME, serviceName);
+                    t.getAttributes().put(GATEWAY_ATTR_ROUTE_RULES, queryRouteInfo(t, serviceName));
+                    return t;
+                }).flatMap(m -> chain.filter(m));
     }
 
 
@@ -184,31 +196,69 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
     /**
      * query route from redis
      **/
-    private Map<String, String> queryRouteInfo(ServerWebExchange exchange, String serviceName) {
+    private Map<String, String> queryRouteInfo(ServerWebExchange exchange, String serviceName){
         //request info
         Map<String, String> map = readReq2Map(exchange);
-        List list = Arrays.asList(ClientField.values()).stream().map(s -> {
+        List<String> list = Arrays.asList(ClientField.values()).stream().map(s -> {
             String field = s.getValue();
             String value = map.get(field);
             if (StringUtils.isEmpty(value)) return null;
             return field + ":" + value;
         }).filter(Objects::nonNull).collect(Collectors.toList());
         if (list == null || list.size() < 1) list.add(REDIS_GATEWAY_RULE_DEFAULT);
-        return (Map<String, String>) template.opsForHash().multiGet(REDIS_GATEWAY_SERVICE_RULE + serviceName, list).map(s -> {
-            List<String> strings = (List<String>) s;
-            return strings.stream().map(m -> {
-                String[] temp = m.split(":");
-                Tuple2<String, String> t = new Tuple2(temp[0], temp[1]);
-                return t;
-            }).collect(Collectors.toMap(m -> m._1, n -> n._2, (x, y) -> y));
+        //load rules
+        String serviceKey = REDIS_GATEWAY_SERVICE_RULE + serviceName;
+        Map<String, String> ruleMap = loadLocalCache(serviceKey)
+                .stream()
+                .collect(Collectors.toMap(m -> m.getKey(), n -> n.getValue(), (x, y) -> y));
+        Map<String, String> fmap = list
+                .stream()
+                .filter(s -> ruleMap.containsKey(s))
+                .map(v -> {
+                    String val = ruleMap.get(v);
+                    String[] temp = val.split(":");
+                    Tuple2<String, String> t = new Tuple2(temp[0], temp[1]);
+                    return t;
+                }).collect(Collectors.toMap(m -> m._1, n -> n._2, (x, y) -> y));
+        if(CollectionUtils.isEmpty(fmap)) throw new BizException(serviceKey + "路由规则未配置(redis):"+list.toString());
+        return fmap;
+    }
 
-        }).switchIfEmpty(Mono.error(new RuntimeException(serviceName + "路由规则未配置(redis)" + list.toString()))).block();
+
+    //load config form local cache
+    private List<SimpleKvDTO> loadLocalCache(String service)  {
+        //query local cache
+        String key = defaultCache.genKey(service);
+        String value = defaultCache.get(key);
+        if(!StringUtils.isBlank(value)) {
+            try {
+                return mapper.readValue(value,new TypeReference<List<SimpleKvDTO>>() {});
+            } catch (IOException e) {
+                log.error("反序列化失败:{}",e);
+            }
+        }
+        //query redis
+        ReactiveHashOperations<String,String,String> opsForHash = template.opsForHash();
+        List<SimpleKvDTO> rules = opsForHash.entries(service).map(s->{
+            SimpleKvDTO dto = new SimpleKvDTO();
+            dto.setKey(s.getKey());
+            dto.setValue(s.getValue());
+            return dto;
+        }).collectList().block();
+        if(CollectionUtils.isEmpty(rules)) throw new RuntimeException(service + "路由规则未配置(redis)");
+        try {
+            defaultCache.put(key,mapper.writeValueAsString(rules));
+        } catch (JsonProcessingException e) {
+            log.error("序列化失败:{}",e);
+        }
+        return rules;
     }
 
 
     private boolean hasAnotherScheme(URI uri) {
         return schemePattern.matcher(uri.getSchemeSpecificPart()).matches() && uri.getHost() == null && uri.getRawPath() == null;
     }
+
 
     @AllArgsConstructor
     public enum ClientField {

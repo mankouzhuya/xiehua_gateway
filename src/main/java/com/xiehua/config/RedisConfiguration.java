@@ -1,7 +1,7 @@
 package com.xiehua.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xiehua.config.dto.redis.GUser;
+import com.xiehua.pub_sub.redis.XiehuaRedisListener;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.resource.ClientResources;
@@ -17,6 +17,8 @@ import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
@@ -24,11 +26,16 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.util.Map;
 
+import static com.xiehua.cache.DefaultCache.REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC;
+
 @Configuration
 public class RedisConfiguration {
 
     @Autowired
     private ObjectMapper mapper;
+
+    @Autowired
+    private LettuceConnectionFactory lettuceConnectionFactory;
 
     @Value("${spring.redis.host}")
     private String host;
@@ -71,6 +78,27 @@ public class RedisConfiguration {
         return client.connect();
     }
 
+
+    //刚才的监听器
+    @Bean
+    public XiehuaRedisListener getConsumerRedis() {
+        return new XiehuaRedisListener();
+    }
+
+    @Bean
+    public ChannelTopic appTopic() {
+        return new ChannelTopic(REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC);
+    }
+
+    //让监听器监听关心的话题
+    @Bean
+    public RedisMessageListenerContainer setRedisMessageListenerContainer() {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(lettuceConnectionFactory);
+        //话题1
+        container.addMessageListener(getConsumerRedis()	, appTopic());
+        return container;
+    }
 
     /**
      * Configures a {@link ReactiveRedisTemplate} with {@link String} keys and a typed

@@ -19,6 +19,11 @@
  */
 package com.xiehua.converter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xiehua.cache.SimpleCache;
+import com.xiehua.cache.dto.SimpleKvDTO;
 import com.xiehua.component.SpringComponent;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.dto.jwt.JwtUser;
@@ -41,12 +46,14 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
@@ -72,20 +79,25 @@ public class ServerHttpBearerAuthenticationConverter implements Function<ServerW
 
     public static final String REDIS_GATEWAY_USER_POWER_PREFIX = "gateway:user:power_";//redis user power
 
-    public static final String SYS_GATEWAY = "gateway";//特殊处理的服务名字(gateway服务为保留服务,访问gateway服务是需要特殊处理)
+    public static final String SYS_GATEWAY = "gateway";//gateway提供的web管理页面,这是需要特殊处理的服务名字(gateway服务为保留服务名,访问gateway服务是需要特殊处理)
 
     @Autowired
     private ReactiveRedisOperations<String, String> operations;
 
     @Autowired
-    private CustomConfig customConfig;
+    private SimpleCache defaultCache;
 
+    @Autowired
+    private CustomConfig customConfig;
 
     @Autowired
     private SpringComponent component;
 
     @Autowired
     private RouteFilter filter;
+
+    @Autowired
+    private ObjectMapper mapper;
 
     /**
      * Apply this function to the current WebExchange, an Authentication object
@@ -106,7 +118,7 @@ public class ServerHttpBearerAuthenticationConverter implements Function<ServerW
                     serverWebExchange.getAttributes().put(GATEWAY_ATTR_SERVER_NAME, serverIds[1]);
                     //get token
                     String u = s.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-                    if (SYS_GATEWAY.equals(serverIds[1])) {
+                    if (SYS_GATEWAY.equals(serverIds[1])) {//check access gateway web service
                         HttpCookie cookie = s.getRequest().getCookies().getFirst(HttpHeaders.AUTHORIZATION);
                         if (Objects.isNull(cookie)) throw new BadCredentialsException("没有token或token已失效");
                         u = cookie.getValue();
@@ -116,15 +128,18 @@ public class ServerHttpBearerAuthenticationConverter implements Function<ServerW
                     if (Objects.isNull(u)) throw new BadCredentialsException("没有token或token已失效");
                     return u;
                 })
+                //validate token
                 .filter(Objects::nonNull)
                 .filter(t -> t.length() > BEARER.length())
                 .map(m -> m.substring(BEARER.length(), m.length()))
                 .filter(n -> !n.isEmpty())
+                //parser token
                 .map(i -> Jwts.parser().setSigningKey(customConfig.getJwtSingKey()).parseClaimsJws(i).getBody())
+                .publishOn(Schedulers.elastic())
                 .flatMap(e -> {
                     if (Objects.isNull(e.getSubject())) throw new BadCredentialsException("token不合法");
                     if (serverWebExchange.getAttributes().get(GATEWAY_ATTR_SERVER_NAME).equals(SYS_GATEWAY)) {
-                        return Mono.just(e).zipWith(Mono.fromCallable(() -> operater().get(genKey(e.getSubject()), SYS_GATEWAY)));
+                        return Mono.just(e).zipWith(Mono.fromCallable(() -> loadLocalCache(e.getSubject(),SYS_GATEWAY)));
                     } else {
                         return Mono.just(e)
                                 .zipWith(component.getBean(RouteLocator.class).getRoutes()
@@ -137,10 +152,10 @@ public class ServerHttpBearerAuthenticationConverter implements Function<ServerW
                                             validateRoute(o, serverWebExchange);
                                             return o;
                                         })
-                                        .map(v -> operater().get(genKey(e.getSubject()), v.getUri().getHost())));
+                                        .map(v -> loadLocalCache(e.getSubject(),v.getUri().getHost())));
+
                     }
                 })
-                .publishOn(Schedulers.elastic())
                 .map(r -> buildAuthenticationToken(r, serverWebExchange))
                 .filter(Objects::nonNull);
     }
@@ -160,6 +175,40 @@ public class ServerHttpBearerAuthenticationConverter implements Function<ServerW
     private ReactiveHashOperations<String, String, String> operater() {
         ReactiveHashOperations<String, String, String> hashOperations = operations.opsForHash();
         return hashOperations;
+    }
+
+    //load config form local cache
+    private Mono<String> loadLocalCache(String subject, String host){
+        String k = genKey(subject);
+        String key = defaultCache.genKey(k);
+        String value = defaultCache.get(key);
+        List<String> permissions;
+        if(!StringUtils.isEmpty(value)) {
+            try {
+                List<SimpleKvDTO> list = mapper.readValue(value,new TypeReference<List<SimpleKvDTO>>() {});
+                permissions = list.stream().filter(s -> s.getKey().equals(host)).map(m -> m.getValue()).collect(Collectors.toList());
+                if(CollectionUtils.isEmpty(permissions)) throw new BadCredentialsException("你没有权限访问该系统");
+                return Mono.just(permissions.get(0));
+            } catch (IOException e) {
+                logger.error("反序列化失败:{}",e);
+            }
+        }
+        //query redis
+        List<SimpleKvDTO> userPermissions = operater().entries(k).map(s->{
+            SimpleKvDTO dto = new SimpleKvDTO();
+            dto.setKey(s.getKey());
+            dto.setValue(s.getValue());
+            return dto;
+        }).collectList().block();
+        if(CollectionUtils.isEmpty(userPermissions)) throw new BadCredentialsException("你没有权限访问该系统");
+        try {
+            defaultCache.put(key,mapper.writeValueAsString(userPermissions));
+        } catch (JsonProcessingException e) {
+            logger.error("序列化失败:{}",e);
+        }
+        permissions = userPermissions.stream().filter(s ->s.getKey().equals(host)).map(m -> m.getValue()).collect(Collectors.toList());
+        if(CollectionUtils.isEmpty(permissions)) throw new BadCredentialsException("你没有权限访问该系统");
+        return Mono.just(permissions.get(0));
     }
 
     /**

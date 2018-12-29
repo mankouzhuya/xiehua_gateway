@@ -15,6 +15,7 @@
     <h3 class="card-title">&nbsp;</h3>
     <h3 class="card-title text-center">携华网关服务列表</h3>
     <h6 class="card-title text-right">欢迎你:&nbsp;<span th:text="${indexRespDTO.userName}"></span></h6>
+    <h6 class="card-title text-right"><button type="button" class="btn btn-danger online_count" onclick="clear_local_cache()">清空本地缓存</button></h6>
     <h6 class="card-title text-right"><button type="button" class="btn btn-danger online_count" onclick="online_count()">当前在线人数统计</button></h6>
     <div class="row">
         <div class="col-md-4"></div>
@@ -71,14 +72,26 @@
             </ul>
             <form class="form-inline">
                 <input class="form-control mr-sm-2 user_account_query" type="search" placeholder="用户权限查询" aria-label="Search" value="">
-                <button class="btn btn-outline-success my-2 my-sm-0 is_online_check" type="submit" onclick="user_account_query()">查询</button>
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit" onclick="user_account_query()">查询</button>
             </form>
         </div>
     </nav>
+    <div style="margin-top: 1em">
+        <form class="form-inline">
+            <input class="form-control mr-sm-2 add_service_name" type="text" placeholder="服务名字" value="">
+            <input class="form-control mr-sm-2 add_service_rule_key" type="text" placeholder="路由key" value="">
+            <input class="form-control mr-sm-2 add_service_rule_value" type="text" placeholder="路由value" value="">
+            <button class="btn btn-outline-success my-2 my-sm-0" type="button" onclick="addService()">添加一个服务</button>
+        </form>
+    </div>
     <div th:each="service : ${indexRespDTO.serviceList}" style="margin-top: 1em">
         <div class="list-group">
             <a href="#" class="list-group-item active">
-                <h5 class="list-group-item-heading">服务名称:&nbsp;<span th:text ="${service.serviceName}"></span> <span style="float: right" th:onclick="'javascript:addRules(\''+${service.serviceName}+'\')' ">添加规则</span></h5>
+                <h5 class="list-group-item-heading">服务名称:&nbsp;
+                    <span th:text ="${service.serviceName}"></span>
+                    <span style="float: right;color: yellow;" th:onclick="'javascript:deleteAllRules(\''+${service.serviceName}+'\')' ">删除整个路由</span>&nbsp;&nbsp;
+                    <span style="float: right;margin-right:20px;" th:onclick="'javascript:addRules(\''+${service.serviceName}+'\')' ">添加规则</span>
+                </h5>
             </a>
             <a href="#" class="list-group-item">
                 <h6 class="list-group-item-heading">路由规则</h6>
@@ -229,12 +242,65 @@
     });
 
     /**
+     * 添加服务
+     * **/
+    function addService() {
+        event.stopPropagation();
+        var service =  $(".add_service_name").val();
+        if(service == "" || service == null || service == undefined) {
+            alert("服务名不能为空");
+            return;
+        }
+        var key =  $(".add_service_rule_key").val();
+        if(key == "" || key == null || key == undefined) {
+            alert("客户端属性不能为空");
+            return;
+        }
+        var value =  $(".add_service_rule_value").val();
+        if(value == "" || value == null || value == undefined) {
+            alert("服务端属性不能为空");
+            return;
+        }
+        var json = {
+            "service": service,
+            "key": key,
+            "value": value
+        };
+        //创建异步对象
+        var xhr = new XMLHttpRequest();
+        //设置请求的类型及url
+        //post请求一定要添加请求头才行不然会报错
+        xhr.open('post', '/gateway/service/rule');
+        xhr.setRequestHeader("Content-type","application/json; charset=utf-8");
+        //发送请求
+        xhr.send(JSON.stringify(json));
+        xhr.onreadystatechange = function () {
+            // 这步为判断服务器是否正确响应
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                alert("规则添加成功!");
+                window.location.reload();
+            }
+        };
+    }
+
+    /**
      * 添加规则
      * **/
     function addRules(serviceName) {
         event.stopPropagation();
         $('#exampleModal').modal('show');
         $("#server_name").val(serviceName);
+    }
+
+
+    /***
+     * 删除整个规则
+     * **/
+    function deleteAllRules(serviceName) {
+        var url ="/gateway/service/rule_d?serviceId="+serviceName;
+        $.delete(url,function (result) {
+            alert("删除成功");
+        })
     }
 
     /***
@@ -262,6 +328,13 @@
             }
         };
 
+    }
+
+    /**清空本地缓存**/
+    function clear_local_cache() {
+        $.post("/gateway/service/clear_local_cache", function(result){
+            alert("已完成!");
+        });
     }
 
     /**在线人数统计**/

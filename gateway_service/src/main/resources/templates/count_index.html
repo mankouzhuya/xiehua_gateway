@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <title>携华网关服务列表</title>
+</head>
+<body>
+
+<div class="container">
+    <h3 class="card-title">&nbsp;</h3>
+    <h3 class="card-title text-center">携华网关服务列表</h3>
+    <h6 class="card-title text-right">欢迎你:&nbsp;<span th:text="${countIndexRespDTO.userName}"></span></h6>
+    <h6 class="card-title text-right"><button type="button" class="btn btn-danger online_count" onclick="online_count()">当前在线人数统计</button></h6>
+    <div class="row">
+        <div class="col-md-4"></div>
+        <div class="col-md-4"></div>
+        <div class="col-md-4">
+            <form class="form-inline" style="float: right">
+                <input class="form-control mr-sm-2 is_online_check_account" type="search" placeholder="用户账号在线查询" aria-label="Search" value="">
+                <button class="btn btn-outline-success my-2 my-sm-0 is_online_check" type="submit" onclick="online_check()">查询</button>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm">说明:</div>
+    </div>
+    <div class="row">
+        <ul>
+            <li>针对相同的服务,添加相同client字段将覆盖旧的路由规则</li>
+            <li>default路由客户端key默认为default:default</li>
+            <li style="color: red;">当前在线人数统计功能对系统性能消耗特别大,慎用</li>
+        </ul>
+    </div>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">当前位置:</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="/gateway/service/index">Home <span class="sr-only">(current)</span></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/gateway/count/index">耗时链接</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">拓扑图</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        其他
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <a class="dropdown-item" href="#">暂无</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">真的没有了!</a>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="addUserPower()">添加用户权限</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link disabled" href="#">禁用</a>
+                </li>
+            </ul>
+            <form class="form-inline">
+                <input class="form-control mr-sm-2 user_account_query" type="search" placeholder="用户权限查询" aria-label="Search" value="">
+                <button class="btn btn-outline-success my-2 my-sm-0 is_online_check" type="submit" onclick="user_account_query()">查询</button>
+            </form>
+        </div>
+    </nav>
+
+    <div style="margin-top: 1em">
+        <table class="table">
+            <thead>
+            <tr>
+                <!---<th scope="col">id</th>-->
+                <th scope="col">content</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="list : ${countIndexRespDTO.list}">
+                <!--<th th:text ="${list.id}" scope="row"></th>--->
+                <td th:text ="${list.msg}" ></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- add rule modal -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">添加路由</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group">
+                            <label for="client_name">客户端:</label>
+                            <input type="text" class="form-control" id="client_name" placeholder="客户端属性.例:version:1">
+                        </div>
+                        <div class="form-group">
+                            <label for="server_flg">服务端:</label>
+                            <input type="text" class="form-control" id="server_flg" placeholder="服务端属性.例:version:1">
+                        </div>
+                        <input type="hidden" id = "server_name" value="">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" id="submit_rule">提交</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- add user modal -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" role="dialog" aria-labelledby="addUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addUserModalLabel">添加用户系统访问权限</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="form-group">
+                            <label for="client_name">用户账号:</label>
+                            <input type="text" class="form-control" id="user_account" placeholder="用户账号">
+                        </div>
+                        <div class="form-group">
+                            <label for="server_flg">系统:</label>
+                            <input type="text" class="form-control" id="sys_flag" placeholder="微服务注册到发现中心的名字,注意大小写,例:PAY-CENTER)">
+                        </div>
+                        <div class="form-group">
+                            <label for="server_flg">权限:</label>
+                            <input type="text" class="form-control" id="user_power" placeholder="用户权限标识(多个权限用,分隔),例:ROLE_ADMIN,ROLE_USER">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" id="submit_user">提交</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<!-- Optional JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="http://code.jquery.com/jquery-3.2.0.min.js" integrity="sha256-JAW99MJVpJBGcbzEuXk4Az05s/XyDdBomFqNlM3ic+I=" crossorigin="anonymous"></script>
+<script src="https://cdn.bootcss.com/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://cdn.bootcss.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+
+<script>
+
+    /**
+     * 添加规则
+     * **/
+    $("#submit_rule").click(function(){
+        var service =  $("#server_name").val();
+        if(service == "" || service == null || service == undefined) {
+            alert("服务名不能为空");
+            return;
+        }
+        var key =  $("#client_name").val();
+        if(key == "" || key == null || key == undefined) {
+            alert("客户端属性不能为空");
+            return;
+        }
+        var value =  $("#server_flg").val();
+        if(value == "" || value == null || value == undefined) {
+            alert("服务端属性不能为空");
+            return;
+        }
+        var json = {
+            "service": service,
+            "key": key,
+            "value": value
+        };
+        //创建异步对象
+        var xhr = new XMLHttpRequest();
+        //设置请求的类型及url
+        //post请求一定要添加请求头才行不然会报错
+        xhr.open('post', '/gateway/service/rule');
+        xhr.setRequestHeader("Content-type","application/json; charset=utf-8");
+        //发送请求
+        xhr.send(JSON.stringify(json));
+        xhr.onreadystatechange = function () {
+            // 这步为判断服务器是否正确响应
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                alert("规则添加成功!");
+                window.location.reload();
+            }
+        };
+    });
+
+    /**
+     * 添加规则
+     * **/
+    function addRules(serviceName) {
+        event.stopPropagation();
+        $('#exampleModal').modal('show');
+        $("#server_name").val(serviceName);
+    }
+
+    /***
+     * 删除规则
+     * **/
+    function delRules(serviceName,clientKey,clientValue) {
+        event.stopPropagation();
+        var json = {
+            "service": serviceName,
+            "key": clientKey + ":" +clientValue,
+        };
+        //创建异步对象
+        var xhr = new XMLHttpRequest();
+        //设置请求的类型及url
+        //post请求一定要添加请求头才行不然会报错
+        xhr.open('post', '/gateway/service/rule_d');
+        xhr.setRequestHeader("Content-type","application/json; charset=utf-8");
+        //发送请求
+        xhr.send(JSON.stringify(json));
+        xhr.onreadystatechange = function () {
+            // 这步为判断服务器是否正确响应
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                alert("规则删除成功!");
+                window.location.reload();
+            }
+        };
+
+    }
+
+    /**在线人数统计**/
+    function online_count() {
+        $.get("/gateway/service/online_count", function(result){
+            alert("当前系统在线人数为: " + result + " 人");
+        });
+    }
+
+
+
+    /**
+     * 检查账号是否在线
+     * **/
+    function online_check() {
+        var account = $(".is_online_check_account").val();
+        if(account == undefined || account == "") {
+            alert("查询账号不能为空");
+            return;
+        }
+        $.get( '/gateway/service/is_onLine?account='+ account, function(result){
+            alert("查询结果为:" + result);
+        });
+    }
+
+
+    /**添加用户权限**/
+    function addUserPower() {
+        event.stopPropagation();
+        $('#addUserModal').modal('show');
+    }
+
+
+    /**添加权限**/
+    $("#submit_user").click(function(){
+        var user_account = $("#user_account").val();
+        if(user_account == undefined || user_account == "") {
+            alert("用户账号不能为空");
+            return;
+        }
+        var sys_flag = $("#sys_flag").val();
+        if(sys_flag == undefined || sys_flag == "") {
+            alert("系统标识不能为空");
+            return;
+        }
+        var user_power = $("#user_power").val();
+        if(user_power == undefined || user_power == "") {
+            alert("权限标识不能为空");
+            return;
+        }
+        var json = {
+            "account":user_account,
+            "sys":sys_flag,
+            "permissions":user_power
+        };
+        //创建异步对象
+        var xhr = new XMLHttpRequest();
+        //设置请求的类型及url
+        //post请求一定要添加请求头才行不然会报错
+        xhr.open('post', '/gateway/service/user_permissions');
+        xhr.setRequestHeader("Content-type","application/json; charset=utf-8");
+        //发送请求
+        xhr.send(JSON.stringify(json));
+        xhr.onreadystatechange = function () {
+            // 这步为判断服务器是否正确响应
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                alert("用户权限添加成功!");
+                window.location.reload();
+            }
+        };
+    });
+
+    /**
+     * 用户权限查询
+     * **/
+    function user_account_query() {
+        var account = $(".user_account_query").val();
+        if(account == undefined || account == "") {
+            alert("用户账户不能为空");
+            return;
+        }
+        $.get("/gateway/service/user_permissions?account=" + account, function(result){
+            alert(JSON.stringify(result));
+        });
+    }
+
+</script>
+
+</body>
+
+</html>

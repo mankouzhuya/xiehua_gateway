@@ -24,7 +24,7 @@ public class RequestTemplateEnhance implements Enhance {
     public byte[] enhance(String sourceClassName, ClassPool classPool) throws CannotCompileException, NotFoundException, IOException {
         if (!CLASS_NAME.equals(sourceClassName)) return null;
         CtClass ctClass = classPool.get(CLASS_NAME);
-        CtClass.debugDump = "D:/";
+//        CtClass.debugDump = "D:/";
         //addTiming(ctClass);
         CtMethod ctMethod = ctClass.getDeclaredMethod(E_METHOD_REQUEST);
          ctMethod.insertBefore(buildMthodSub());

@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: pay-center
+server:
+  port: 8001
+eureka:
+  client:
+    service-url:
+      defaultZone: http://127.0.0.1:7210/eureka/
+  instance:
+    metadata-map:
+      version: 2

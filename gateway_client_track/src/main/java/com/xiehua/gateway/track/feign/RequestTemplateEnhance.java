@@ -27,9 +27,7 @@ public class RequestTemplateEnhance implements Enhance {
         CtClass.debugDump = "D:/";
         //addTiming(ctClass);
         CtMethod ctMethod = ctClass.getDeclaredMethod(E_METHOD_REQUEST);
-       // ctMethod.insertBefore("headers.put(\"test-key\",java.util.Arrays.asList(\"test-value\"));");
          ctMethod.insertBefore(buildMthodSub());
-       // ctMethod.insertBefore(" System.out.println(\"我调用了2333\");");
         return ctClass.toBytecode();
     }
 
@@ -37,18 +35,30 @@ public class RequestTemplateEnhance implements Enhance {
         StringBuffer stringBuffer = new StringBuffer();
         stringBuffer.append("org.springframework.web.context.request.RequestAttributes requestAttributes = org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes();\r\n");
         stringBuffer.append("javax.servlet.http.HttpServletRequest req = ((org.springframework.web.context.request.ServletRequestAttributes)requestAttributes).getRequest();\r\n");
+        //uid
         stringBuffer.append("String reqUid = req.getHeader(\""+HEAD_REQ_ID+"\");\r\n");
-        stringBuffer.append("String itemId = req.getHeader(\""+HEAD_ITERM_ID+"\");\r\n");
-        stringBuffer.append("String version = req.getHeader(\""+HEAD_VERSION+"\");\r\n");
+        stringBuffer.append("if(reqUid !=null && reqUid !=\"\"){\r\n");
         stringBuffer.append("java.util.List uidList = new java.util.ArrayList();\r\n");
         stringBuffer.append("uidList.add(reqUid);\r\n");
+        stringBuffer.append("headers.put(\""+HEAD_REQ_ID+"\",uidList);\r\n");
+        stringBuffer.append("}\r\n");
+
+        //itemId
+        stringBuffer.append("String itemId = req.getHeader(\""+HEAD_ITERM_ID+"\");\r\n");
+        stringBuffer.append("if(itemId !=null && itemId !=\"\"){\r\n");
         stringBuffer.append("java.util.List itemIdList = new java.util.ArrayList();\r\n");
         stringBuffer.append("itemIdList.add(itemId);\r\n");
+        stringBuffer.append("headers.put(\""+HEAD_FROM_ID+"\",itemIdList);\r\n");
+        stringBuffer.append("}\r\n");
+
+        //version
+        stringBuffer.append("String version = req.getHeader(\""+HEAD_VERSION+"\");\r\n");
+        stringBuffer.append("if(version !=null && version !=\"\"){\r\n");
         stringBuffer.append("java.util.List versionList = new java.util.ArrayList();\r\n");
         stringBuffer.append("versionList.add(version);\r\n");
-        stringBuffer.append("headers.put(\""+HEAD_REQ_ID+"\",uidList);\r\n");
-        stringBuffer.append("headers.put(\""+HEAD_FROM_ID+"\",itemIdList);\r\n");
         stringBuffer.append("headers.put(\""+HEAD_VERSION+"\",versionList);\r\n");
+        stringBuffer.append("}\r\n");
+
         return stringBuffer.toString();
     }
 
@@ -89,17 +99,11 @@ public class RequestTemplateEnhance implements Enhance {
         if(!"void".equals(type)) {
             body.append("return result;\n");
         }
-
         body.append("}");
         //替换拦截器方法的主体内容，并将该方法添加到class之中
         newCtMethod.setBody(body.toString());
         cct.addMethod(newCtMethod);
-
-        //输出拦截器的代码块
-        System.out.println("拦截器方法的主体:");
-        Arrays.asList();
         System.currentTimeMillis();
-        System.out.println(body.toString());
     }
 
 }

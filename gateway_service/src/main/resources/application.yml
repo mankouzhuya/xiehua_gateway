@@ -13,8 +13,8 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://eureka:eureka123@127.0.0.1:7210/eureka/
-
+      #defaultZone: http://eureka:eureka123@127.0.0.1:7210/eureka/
+      defaultZone: http://127.0.0.1:7210/eureka/
 
 spring:
   application:

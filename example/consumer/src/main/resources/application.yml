@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: order-center
+eureka:
+  client:
+    service-url:
+      defaultZone: http://127.0.0.1:7210/eureka/
+  instance:
+    metadata-map:
+      version: 2
+    #prefer-ip-address: true
+server:
+  port: 8002
+feign:
+  hystrix:
+    enabled: false
+    #execution:
+    #  isolation:
+    #    strategy: ExecutionIsolationStrategy.SEMAPHORE

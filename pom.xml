@@ -9,7 +9,8 @@
     <modules>
         <module>gateway_service</module>
         <module>gateway_client_track</module>
-    </modules>
+		<module>example</module>
+	</modules>
     <packaging>pom</packaging>
 
 	<name>xiehua_gateway</name>
@@ -39,34 +40,10 @@
         <ratelimitj.version>0.4.4</ratelimitj.version>
         <commons-io.version>2.6</commons-io.version>
         <javassist.version>3.24.1-GA</javassist.version>
+        <google-findbus-jsr305.version>3.0.2</google-findbus-jsr305.version>
 	</properties>
 
 	<dependencies>
-        <!--gateway-->
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-gateway</artifactId>
-		</dependency>
-		<!--security-->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-redis-reactive</artifactId>
-		</dependency>
-        <!--actuator-->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-actuator</artifactId>
-		</dependency>
-		<!-- 模板引擎 Thymeleaf 依赖 -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-thymeleaf</artifactId>
-		</dependency>
-
 		<!--cloud-->
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
@@ -180,6 +157,13 @@
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
             <version>${javassist.version}</version>
+        </dependency>
+        <!--findbugs-->
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>${google-findbus-jsr305.version}</version>
+            <optional>true</optional>
         </dependency>
 		<!--lombok-->
 		<dependency>

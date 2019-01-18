@@ -86,12 +86,6 @@ public class WebUtil {
         return dest;
     }
 
-
-    public static void main(String[] args) throws JsonParseException, JsonMappingException, IOException, IllegalAccessException {
-
-
-    }
-
     /**
      * api调用时，生成QueryStr
      **/

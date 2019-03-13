@@ -1,23 +1,20 @@
 package com.xiehua.support.wrap;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xiehua.component.GateWayComponent;
 import com.xiehua.fun.Try;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import com.xiehua.support.wrap.dto.ReqDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.NettyDataBufferFactory;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
 import reactor.core.publisher.Flux;
-import reactor.core.scheduler.Schedulers;
 
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.io.IOException;
 
+import static com.xiehua.filter.RouteFilter.HEAD_ITERM_ID;
+import static com.xiehua.filter.g.CounterFilter.ATTR_REQ_ITEM;
 import static com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator.SUPPORT_MEDIA_TYPES;
 
 @Slf4j
@@ -25,23 +22,17 @@ public class XiehuaServerHttpRequestDecorator extends ServerHttpRequestDecorator
 
     private Flux<DataBuffer> body;
 
-
-    public XiehuaServerHttpRequestDecorator(ServerHttpRequest delegate) {
+    public XiehuaServerHttpRequestDecorator(ServerHttpRequest delegate, GateWayComponent gateWayComponent) throws IOException {
         super(delegate);
-        final MediaType contentType = delegate.getHeaders().getContentType();
-        final String uri = delegate.getURI().toString();
-        final String method = Optional.ofNullable(delegate.getMethod()).orElse(HttpMethod.GET).name();
-        final String headers = delegate.getHeaders().entrySet().stream().map(s -> s.getKey() + ":[" + String.join(";", s.getValue()) + "]").collect(Collectors.joining("\r\n"));
-        StringBuilder builder = new StringBuilder();
-        builder.append("请求地址:").append(uri).append("\r\n");
-        builder.append("请求方法:").append(method).append("\r\n");
-        builder.append("请求头;").append(headers).append("\r\n");
-        builder.append("请求体;%s").append("\r\n");
+        final MediaType contentType = super.getHeaders().getContentType();
         Flux<DataBuffer> flux = super.getBody();
-        if(delegate.getMethod().equals(HttpMethod.GET)) log.info(String.format(builder.toString(), ""));
-       if(contentType !=null && SUPPORT_MEDIA_TYPES.stream().anyMatch(s -> s.getType().equalsIgnoreCase(contentType.getType()) && s.getSubtype().equalsIgnoreCase(contentType.getSubtype()))){
-            body = flux.map(Try.of(s -> XiehuaServerWebExchangeDecorator.log(builder.toString(),s)));
-        }else {
+        String itemId = getHeaders().getFirst(HEAD_ITERM_ID);
+        String key = gateWayComponent.getDefaultCache().genKey(ATTR_REQ_ITEM + itemId);
+        String value = gateWayComponent.getDefaultCache().get(key);
+        if (!StringUtils.isEmpty(value) && SUPPORT_MEDIA_TYPES.stream().anyMatch(s -> s.getType().equalsIgnoreCase(contentType.getType()) && s.getSubtype().equalsIgnoreCase(contentType.getSubtype()))) {
+            ReqDTO reqDTO = gateWayComponent.getMapper().readValue(value, ReqDTO.class);
+            body = flux.switchIfEmpty(Flux.defer(() -> Flux.empty())).map(Try.of(s -> gateWayComponent.log(reqDTO, s, true)));
+        } else {
             body = flux;
         }
     }

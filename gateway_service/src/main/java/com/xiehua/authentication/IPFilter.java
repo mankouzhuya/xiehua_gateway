@@ -65,12 +65,11 @@ public class IPFilter implements WebFilter {
         //permit all url
         List<String> urls = Optional.ofNullable(config.getPermitUrls()).orElseThrow(RuntimeException::new).stream().map(s -> s.getUrl()).collect(Collectors.toList());
         urls.addAll(URL_PERMIT_ALL);
-        XiehuaServerWebExchangeDecorator serverWebExchangeDecorator = new XiehuaServerWebExchangeDecorator(exchange);
         for (String url : urls) {
-            if (antPathMatcher.match(url, exchange.getRequest().getPath().value())) return chain.filter(serverWebExchangeDecorator);
+            if (antPathMatcher.match(url, exchange.getRequest().getPath().value())) return chain.filter(exchange);
         }
         //white list chekc
-        return checkWhiteList(serverWebExchangeDecorator, chain);
+        return checkWhiteList(exchange, chain);
     }
 
     //white list chekc

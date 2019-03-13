@@ -2,7 +2,9 @@ package com.xiehua.filter;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xiehua.component.GateWayComponent;
 import com.xiehua.fun.Try;
+import com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator;
 import com.xiehua.track.Span;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
@@ -41,11 +43,14 @@ public class TrackFilter implements GatewayFilter, XiehuaOrdered {
     private StatefulRedisConnection<String, String> connection;
 
     @Autowired
+    private GateWayComponent gateWayComponent;
+
+    @Autowired
     private ObjectMapper mapper;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        return Mono.justOrEmpty(exchange).flatMap(Try.of(s -> {
+        return Mono.justOrEmpty(new XiehuaServerWebExchangeDecorator(exchange,gateWayComponent)).flatMap(Try.of(s -> {
             String serverName = exchange.getAttribute(GATEWAY_ATTR_SERVER_NAME);
             if (StringUtils.isEmpty(serverName)) return chain.filter(exchange);
             String traceId = exchange.getRequest().getHeaders().getFirst(HEAD_REQ_ID);

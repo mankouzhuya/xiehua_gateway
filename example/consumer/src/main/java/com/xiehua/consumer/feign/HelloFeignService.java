@@ -1,6 +1,8 @@
 package com.xiehua.consumer.feign;
 
+import com.xiehua.consumer.dto.UserDTO;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,4 +19,7 @@ public interface HelloFeignService {
     @RequestMapping(value = "/hello", method = RequestMethod.GET)
     String hello(@RequestParam(value = "name") String name);
 
+
+    @RequestMapping(value = "/hello", method = RequestMethod.POST)
+    UserDTO hello2(@RequestParam(value = "name") String name, @RequestBody UserDTO userDTO);
 }

@@ -40,11 +40,4 @@ public class Span implements Serializable{
         this.childs.add(span);
     }
 
-    public static void main(String[] args) {
-        Span root = new Span("root");
-        Span c1 = new Span("c1");
-        root.addChild(c1);
-        System.out.println(root);
-    }
-
 }

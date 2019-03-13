@@ -1,12 +1,11 @@
 package com.xiehua.consumer.controller;
 
+import com.xiehua.consumer.dto.UserDTO;
 import com.xiehua.consumer.feign.HelloFeignService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.Random;
@@ -44,6 +43,11 @@ public class HelloController {
     @GetMapping("/public_remote/{name}")
     public String helloRemote(@PathVariable("name") String name, HttpServletRequest request){
         return helloRemote.hello(name);
+    }
+
+    @PostMapping("/public_remote/{name}")
+    public UserDTO helloRemote2(@PathVariable("name") String name, @RequestBody UserDTO userDTO){
+        return helloRemote.hello2(name,userDTO);
     }
 
 }

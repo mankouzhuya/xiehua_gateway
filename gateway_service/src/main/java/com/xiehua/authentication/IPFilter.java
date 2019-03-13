@@ -2,6 +2,7 @@ package com.xiehua.authentication;
 
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.dto.jwt.JwtUser;
+import com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,11 +65,12 @@ public class IPFilter implements WebFilter {
         //permit all url
         List<String> urls = Optional.ofNullable(config.getPermitUrls()).orElseThrow(RuntimeException::new).stream().map(s -> s.getUrl()).collect(Collectors.toList());
         urls.addAll(URL_PERMIT_ALL);
+        XiehuaServerWebExchangeDecorator serverWebExchangeDecorator = new XiehuaServerWebExchangeDecorator(exchange);
         for (String url : urls) {
-            if (antPathMatcher.match(url, exchange.getRequest().getPath().value())) return chain.filter(exchange);
+            if (antPathMatcher.match(url, exchange.getRequest().getPath().value())) return chain.filter(serverWebExchangeDecorator);
         }
         //white list chekc
-        return checkWhiteList(exchange, chain);
+        return checkWhiteList(serverWebExchangeDecorator, chain);
     }
 
     //white list chekc
@@ -78,6 +80,7 @@ public class IPFilter implements WebFilter {
                 .any(s -> antPathMatcher.match(s.getUrl(), exchange.getRequest().getPath().value()) && s.getIp().stream().filter(m -> m.equals(getIpAddr(exchange))).count() > 0)
                 .flatMap(m -> {
                     if (m) {
+                        //build default user
                         List<GrantedAuthority> list = Arrays.asList(CustomConfig.SecurityRoleEnum.role_inner_protected.getFullRole()).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
                         UserDetails userDetails = new JwtUser("xiehua_gid", "xiehua_account", "xiehua_pwd","xiehua_gateway", list);
                         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, "xiehua_gid", userDetails.getAuthorities());

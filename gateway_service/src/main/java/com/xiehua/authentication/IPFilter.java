@@ -1,8 +1,10 @@
 package com.xiehua.authentication;
 
+import com.xiehua.component.GateWayComponent;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.dto.jwt.JwtUser;
 import com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,12 +34,14 @@ import java.util.stream.Collectors;
 
 import static com.xiehua.secruity.GateWaySecurity.URL_PERMIT_ALL;
 
-
+@Slf4j
 public class IPFilter implements WebFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(IPFilter.class);
 
     private CustomConfig config;
+
+    private GateWayComponent gateWayComponent;
 
     private AntPathMatcher antPathMatcher = new AntPathMatcher();
 
@@ -45,8 +49,9 @@ public class IPFilter implements WebFilter {
 
     private ServerAuthenticationSuccessHandler authenticationSuccessHandler = new WebFilterChainServerAuthenticationSuccessHandler();
 
-    public IPFilter(CustomConfig config) {
+    public IPFilter(CustomConfig config, GateWayComponent gateWayComponent) {
         this.config = config;
+        this.gateWayComponent = gateWayComponent;
     }
 
     /**
@@ -65,11 +70,12 @@ public class IPFilter implements WebFilter {
         //permit all url
         List<String> urls = Optional.ofNullable(config.getPermitUrls()).orElseThrow(RuntimeException::new).stream().map(s -> s.getUrl()).collect(Collectors.toList());
         urls.addAll(URL_PERMIT_ALL);
+        XiehuaServerWebExchangeDecorator webExchangeDecorator = gateWayComponent.mutateWebExchange(exchange);
         for (String url : urls) {
-            if (antPathMatcher.match(url, exchange.getRequest().getPath().value())) return chain.filter(exchange);
+            if (antPathMatcher.match(url, webExchangeDecorator.getRequest().getPath().value())) return chain.filter(webExchangeDecorator);
         }
         //white list chekc
-        return checkWhiteList(exchange, chain);
+        return checkWhiteList(webExchangeDecorator, chain);
     }
 
     //white list chekc
@@ -117,6 +123,8 @@ public class IPFilter implements WebFilter {
         }
         return ipString;
     }
+
+
 
 
 }

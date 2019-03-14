@@ -1,6 +1,6 @@
 package com.xiehua.fun;
 
 @FunctionalInterface
-public interface UncheckedFunctionArg1<T, R> {
+public interface UncheckedFunctionArg2<T, R> {
     R apply(T t) throws Exception;
 }

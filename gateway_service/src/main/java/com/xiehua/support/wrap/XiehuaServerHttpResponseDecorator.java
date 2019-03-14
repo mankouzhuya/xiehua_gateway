@@ -12,12 +12,15 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.http.server.reactive.ServerHttpResponseDecorator;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
 
+import static com.xiehua.filter.RouteFilter.HEAD_FROM_ID;
 import static com.xiehua.filter.RouteFilter.HEAD_ITERM_ID;
-import static com.xiehua.filter.g.CounterFilter.ATTR_REQ_ITEM;
+import static com.xiehua.filter.RouteFilter.HEAD_REQ_ID;
 import static com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator.SUPPORT_MEDIA_TYPES;
+import static com.xiehua.support.wrap.collect.CountTool.ATTR_REQ_ITEM;
 
 
 @Slf4j
@@ -38,25 +41,27 @@ public class XiehuaServerHttpResponseDecorator extends ServerHttpResponseDecorat
     @Override
     public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
         final MediaType contentType = super.getHeaders().getContentType();
+        String trackId = getHeaders().getFirst(HEAD_REQ_ID);
         String itemId = getHeaders().getFirst(HEAD_ITERM_ID);
+        String fromId = getHeaders().getFirst(HEAD_FROM_ID);
         String key = gateWayComponent.getDefaultCache().genKey(ATTR_REQ_ITEM + itemId);
         String value = gateWayComponent.getDefaultCache().get(key);
-        if (!StringUtils.isEmpty(value)){
+        if (!StringUtils.isEmpty(value)) {
             try {
-                if(SUPPORT_MEDIA_TYPES.stream().anyMatch(s -> s.getType().equalsIgnoreCase(contentType.getType()) && s.getSubtype().equalsIgnoreCase(contentType.getSubtype()))){
+                if (SUPPORT_MEDIA_TYPES.stream().anyMatch(s -> s.getType().equalsIgnoreCase(contentType.getType()) && s.getSubtype().equalsIgnoreCase(contentType.getSubtype()))) {
                     ReqDTO reqDTO = gateWayComponent.getMapper().readValue(value, ReqDTO.class);
                     if (body instanceof Mono) {
                         final Mono<DataBuffer> monoBody = (Mono<DataBuffer>) body;
-                        return super.writeWith(monoBody.switchIfEmpty(Mono.defer(() -> Mono.empty())).map(Try.of(s -> gateWayComponent.log(reqDTO, s, false))));
+                        return super.writeWith(monoBody.publishOn(Schedulers.elastic()).switchIfEmpty(Mono.defer(() -> Mono.empty())).map(Try.of(s -> gateWayComponent.log(reqDTO, s, false,fromId,trackId))));
                     }
                     if (body instanceof Flux) {
                         final Flux<DataBuffer> monoBody = (Flux<DataBuffer>) body;
-                        return super.writeWith(monoBody.switchIfEmpty(Flux.defer(() -> Flux.empty())).map(Try.of(s -> gateWayComponent.log(reqDTO, s, false))));
+                        return super.writeWith(monoBody.publishOn(Schedulers.elastic()).switchIfEmpty(Flux.defer(() -> Flux.empty())).map(Try.of(s -> gateWayComponent.log(reqDTO, s, false,fromId,trackId))));
                     }
                 }
             } catch (IOException e) {
                 log.error("序列化错误:{}", e);
-            }finally {
+            } finally {
                 gateWayComponent.getDefaultCache().remove(key);
             }
         }

@@ -2,9 +2,7 @@ package com.xiehua.filter;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xiehua.component.GateWayComponent;
 import com.xiehua.fun.Try;
-import com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator;
 import com.xiehua.track.Span;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
@@ -31,8 +29,8 @@ import static com.xiehua.filter.RouteFilter.*;
  *
  * @Version V1.0
  */
-@Component
-@Slf4j
+//@Component
+//@Slf4j
 public class TrackFilter implements GatewayFilter, XiehuaOrdered {
 
     public static final String REDIS_GATEWAY_TRACK = "gateway:track:req_";//redis track
@@ -43,14 +41,11 @@ public class TrackFilter implements GatewayFilter, XiehuaOrdered {
     private StatefulRedisConnection<String, String> connection;
 
     @Autowired
-    private GateWayComponent gateWayComponent;
-
-    @Autowired
     private ObjectMapper mapper;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        return Mono.justOrEmpty(new XiehuaServerWebExchangeDecorator(exchange,gateWayComponent)).flatMap(Try.of(s -> {
+        return Mono.justOrEmpty(exchange).flatMap(Try.of(s -> {
             String serverName = exchange.getAttribute(GATEWAY_ATTR_SERVER_NAME);
             if (StringUtils.isEmpty(serverName)) return chain.filter(exchange);
             String traceId = exchange.getRequest().getHeaders().getFirst(HEAD_REQ_ID);
@@ -62,7 +57,7 @@ public class TrackFilter implements GatewayFilter, XiehuaOrdered {
 
             if (StringUtils.isEmpty(spanId)) spanId = exchange.getRequest().getHeaders().getFirst(HEAD_ITERM_ID);
 
-            Span currentSpan = new Span(traceId, spanId, serverName, url, LocalDateTime.now(), new ArrayList<>());
+            Span currentSpan = new Span(traceId, spanId, url, LocalDateTime.now(),null, new ArrayList<>(),null);
 
             return asyncRW(key,currentSpan,exchange,chain);
 

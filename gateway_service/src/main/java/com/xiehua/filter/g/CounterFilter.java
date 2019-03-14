@@ -11,39 +11,28 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.xiehua.filter.RouteFilter.HEAD_ITERM_ID;
+import static com.xiehua.support.wrap.collect.CountTool.ATTR_REQ_ITEM;
+import static com.xiehua.support.wrap.collect.CountTool.GATEWAY_ATTR_REQ_TIME;
 
 /**
  * 打印请求参数及统计执行时长过滤器
+ * 废除,该功能已迁移到CountTool
  * @Version V1.0
  */
-@Component
+@Deprecated
 @Slf4j
 public class CounterFilter implements GlobalFilter, XiehuaOrdered {
 
-
-    private static final String GATEWAY_ATTR_REQ_TIME = "gateway_attr_req_time";//发起请求时间
-
-    private static final String GATEWAY_ATTR_RECEIVE_REQ_TIME = "gateway_attr_receive_req_time";//收到请求时间
-
-    public static final String REDIS_GATEWAY_TIMER_REQID_PREFIX = "gateway:timer:count_";
-
-    public static final String ATTR_REQ_ITEM = "attr_req_item";
-
-    public static DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    public static final Integer DEFAULT_TIMER=  2000;//接口耗时时长（2秒钟）
 
 
 

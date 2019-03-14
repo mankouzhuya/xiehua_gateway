@@ -1,6 +1,6 @@
 package com.xiehua.track;
 
-import com.xiehua.track.tree.Node;
+import com.xiehua.support.wrap.dto.ReqDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,17 +19,18 @@ public class Span implements Serializable{
 
     private String spanId;//单独一次请求的id
 
-    private String serviceName;//服务名字
-
     private String url;//请求url
 
     private LocalDateTime reqTime = LocalDateTime.now();//请求时间
 
+    private ReqDTO reqDTO;//请求响应详细
+
     private List<Span> childs;//子节点
 
-    public Span(String traceId){
-        this.traceId = traceId;
-    }
+    private Long executeTime;//执行时间
+
+
+
 
     public void addChild(Span span) {
         if (this.childs == null) {

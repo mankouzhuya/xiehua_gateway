@@ -1,6 +1,7 @@
 package com.xiehua.support.wrap;
 
 import com.xiehua.component.GateWayComponent;
+import com.xiehua.support.wrap.dto.ReqDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -33,10 +34,10 @@ public class XiehuaServerWebExchangeDecorator extends ServerWebExchangeDecorator
     private XiehuaServerHttpResponseDecorator responseDecorator;
 
 
-    public XiehuaServerWebExchangeDecorator(ServerWebExchange delegate, GateWayComponent gateWayComponent) {
+    public XiehuaServerWebExchangeDecorator(ServerWebExchange delegate, ReqDTO reqDTO, GateWayComponent gateWayComponent) {
         super(delegate);
         try {
-            requestDecorator = new XiehuaServerHttpRequestDecorator(delegate.getRequest(),gateWayComponent);
+            requestDecorator = new XiehuaServerHttpRequestDecorator(delegate.getRequest(),reqDTO,gateWayComponent);
             responseDecorator = new XiehuaServerHttpResponseDecorator(delegate.getResponse(),gateWayComponent);
         } catch (IOException e) {
             log.error("序列化错误:{}",e);

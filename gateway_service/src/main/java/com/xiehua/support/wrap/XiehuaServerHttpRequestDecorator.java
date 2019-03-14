@@ -14,25 +14,20 @@ import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
 
-import static com.xiehua.filter.RouteFilter.HEAD_ITERM_ID;
 import static com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator.SUPPORT_MEDIA_TYPES;
-import static com.xiehua.support.wrap.collect.CountTool.ATTR_REQ_ITEM;
 
 @Slf4j
 public class XiehuaServerHttpRequestDecorator extends ServerHttpRequestDecorator {
 
     private Flux<DataBuffer> body;
 
-    public XiehuaServerHttpRequestDecorator(ServerHttpRequest delegate, GateWayComponent gateWayComponent) throws IOException {
+    public XiehuaServerHttpRequestDecorator(ServerHttpRequest delegate, ReqDTO reqDTO, GateWayComponent gateWayComponent) throws IOException {
         super(delegate);
         final MediaType contentType = super.getHeaders().getContentType();
         Flux<DataBuffer> flux = super.getBody();
-        String itemId = getHeaders().getFirst(HEAD_ITERM_ID);
-        String key = gateWayComponent.getDefaultCache().genKey(ATTR_REQ_ITEM + itemId);
-        String value = gateWayComponent.getDefaultCache().get(key);
-        if (!StringUtils.isEmpty(value) && contentType != null && SUPPORT_MEDIA_TYPES.stream().anyMatch(s -> s.getType().equalsIgnoreCase(contentType.getType()) && s.getSubtype().equalsIgnoreCase(contentType.getSubtype()))) {
-            ReqDTO reqDTO = gateWayComponent.getMapper().readValue(value, ReqDTO.class);
-            body = flux.publishOn(Schedulers.elastic()).switchIfEmpty(Flux.defer(() -> Flux.empty())).map(Try.of(s -> gateWayComponent.log(reqDTO, s, true,null,null)));
+        final ReqDTO reqDTO2 = gateWayComponent.saveReqDTO(reqDTO);
+        if (contentType != null && SUPPORT_MEDIA_TYPES.stream().anyMatch(s -> s.getType().equalsIgnoreCase(contentType.getType()) && s.getSubtype().equalsIgnoreCase(contentType.getSubtype()))) {
+            body = flux.publishOn(Schedulers.elastic()).map(Try.of(s -> gateWayComponent.log(s,reqDTO2)));
         } else {
             body = flux;
         }

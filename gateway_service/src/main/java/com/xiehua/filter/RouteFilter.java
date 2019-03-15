@@ -134,14 +134,12 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
      * override request head and put head into redis
      **/
     private Mono<ServerWebExchange> writeReqInfo2Redis(ServerWebExchange exchange) {
-        String str = exchange.getRequest().getHeaders().getFirst(HEAD_REQ_ID);
-        //check req id
-        if (StringUtils.isEmpty(str)) return writeRedis(exchange);
-        return template.hasKey(REDIS_GATEWAY_REQUEST_ID_PREFIX + str).flatMap(s -> {
+        String key = REDIS_GATEWAY_REQUEST_ID_PREFIX + exchange.getRequest().getHeaders().getFirst(HEAD_REQ_ID);
+        return template.hasKey(key).flatMap(s -> {
             if (s) {
                 return Mono.just(exchange);
             } else {
-                return Mono.error(new RuntimeException("REQ_ID 不存在或已失效"));
+                return writeRedis(exchange,key);
             }
         });
     }
@@ -149,11 +147,8 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
     /**
      * write redis
      **/
-    private Mono<ServerWebExchange> writeRedis(ServerWebExchange exchange) {
-        //put req id
-        String reqId = UUID.randomUUID().toString().replace("-", "");
+    private Mono<ServerWebExchange> writeRedis(ServerWebExchange exchange,String key) {
         ServerHttpRequest.Builder builder = exchange.getRequest().mutate();
-        builder.header(HEAD_REQ_ID, reqId);
         //check jwt attr
         Claims claims = exchange.getAttribute(GATEWAY_ATTR_JWT);
         LocalDateTime now = LocalDateTime.now();
@@ -182,7 +177,6 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
         ServerHttpRequest request = builder.build();
         ServerWebExchange webExchange = exchange.mutate().request(request).response(exchange.getResponse()).build();
         //write req info to redis and set expire time for key 'req_id_xxx'
-        String key = REDIS_GATEWAY_REQUEST_ID_PREFIX + reqId;
         LocalDateTime end = now.plusSeconds(EXP_TIME);
         return template.opsForHash().putAll(key, readReq2Map(webExchange)).then(template.expire(key, Duration.between(now, end))).then(Mono.just(webExchange));
     }
@@ -190,8 +184,18 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
     /**
      * read web exchange to map
      **/
-    private Map<String, String> readReq2Map(ServerWebExchange exchange) {
+    public static Map<String, String> readReq2Map(ServerWebExchange exchange) {
         return exchange.getRequest().getHeaders().entrySet().stream().map(s -> {
+            Tuple2<String, String> t = new Tuple2(s.getKey(), s.getValue().get(0));
+            return t;
+        }).collect(Collectors.toMap(s -> s._1, t -> t._2, (x, y) -> y));
+    }
+
+    /**
+     * read web exchange to map
+     **/
+    public static Map<String, String> readReq2Map(HttpHeaders respHeaders) {
+        return respHeaders.entrySet().stream().map(s -> {
             Tuple2<String, String> t = new Tuple2(s.getKey(), s.getValue().get(0));
             return t;
         }).collect(Collectors.toMap(s -> s._1, t -> t._2, (x, y) -> y));

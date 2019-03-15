@@ -29,8 +29,8 @@ import static com.xiehua.filter.RouteFilter.*;
  *
  * @Version V1.0
  */
-@Component
-@Slf4j
+//@Component
+//@Slf4j
 public class TrackFilter implements GatewayFilter, XiehuaOrdered {
 
     public static final String REDIS_GATEWAY_TRACK = "gateway:track:req_";//redis track
@@ -57,7 +57,7 @@ public class TrackFilter implements GatewayFilter, XiehuaOrdered {
 
             if (StringUtils.isEmpty(spanId)) spanId = exchange.getRequest().getHeaders().getFirst(HEAD_ITERM_ID);
 
-            Span currentSpan = new Span(traceId, spanId, serverName, url, LocalDateTime.now(), new ArrayList<>());
+            Span currentSpan = new Span(traceId, spanId, url,null, LocalDateTime.now(),null, new ArrayList<>(),null);
 
             return asyncRW(key,currentSpan,exchange,chain);
 

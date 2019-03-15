@@ -32,8 +32,8 @@ import java.util.stream.Collectors;
 import static com.xiehua.cache.DefaultCache.REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC;
 import static com.xiehua.converter.ServerHttpBearerAuthenticationConverter.REDIS_GATEWAY_USER_POWER_PREFIX;
 import static com.xiehua.filter.RouteFilter.*;
-import static com.xiehua.filter.g.CounterFilter.REDIS_GATEWAY_TIMER_REQID_PREFIX;
 import static com.xiehua.pub_sub.redis.dto.XiehuaMessage.*;
+import static com.xiehua.support.wrap.collect.CountTool.REDIS_GATEWAY_TIMER_REQID_PREFIX;
 
 
 @Service

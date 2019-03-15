@@ -24,6 +24,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -59,6 +60,9 @@ public class AppConfig {
 
     @Value("${whiteList.permit}")
     private String whiteListPermit;
+
+    @Value("${customer.sampling.rate:1%}")
+    private String customerSamplingRate;
 
 
     @Bean
@@ -124,6 +128,8 @@ public class AppConfig {
         CustomConfig config = new CustomConfig(geUrltPermit(mapper), getIpPermit(mapper));
         config.setJwtExpiration(jwtExpiration);
         config.setJwtSingKey(Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtSecreKey)));
+        //采样率
+        config.setCustomerSamplingRate(BigDecimal.valueOf(Double.parseDouble(customerSamplingRate.replace("%", ""))*0.01));
         return config;
         // return new CustomConfig(null,null);
     }

@@ -5,7 +5,8 @@ import java.util.function.Function;
 
 public class Try {
 
-    public static <R> Function of(UncheckedFunction<R> mapper) {
+
+    public static <R> Function of(UncheckedFunction1<R> mapper) {
         Objects.requireNonNull(mapper);
         return t -> {
             try {
@@ -16,7 +17,7 @@ public class Try {
         };
     }
 
-    public static <T, R> Function<T, R> of(UncheckedFunctionArg1<T, R> mapper) {
+    public static <T, R> Function<T, R> of(UncheckedFunctionArg2<T, R> mapper) {
         Objects.requireNonNull(mapper);
         return t -> {
             try {

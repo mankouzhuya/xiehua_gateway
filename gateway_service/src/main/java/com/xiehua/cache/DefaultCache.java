@@ -22,7 +22,7 @@ public class DefaultCache implements SimpleCache {
 
     private static LoadingCache<String, String> cache = CacheBuilder.newBuilder()
             .maximumSize(1000000)//最多存放1000000个数据
-            .expireAfterWrite(7, TimeUnit.DAYS)//缓存7天，7天之后进行回收
+            .expireAfterAccess(7, TimeUnit.DAYS)//缓存7天，7天之后进行回收
             .recordStats()//开启，记录状态数据功能
             .build(new CacheLoader<String, String>() {
                 @Override

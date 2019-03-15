@@ -2,6 +2,7 @@ package com.xiehua.secruity;
 
 import com.xiehua.authentication.IPFilter;
 import com.xiehua.authentication.JwtAuthenticationFilter;
+import com.xiehua.component.GateWayComponent;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.converter.ServerHttpBearerAuthenticationConverter;
 import com.xiehua.handle.JWTAuthenticationSuccessHandler;
@@ -31,6 +32,9 @@ public class GateWaySecurity {
 
     @Autowired
     private CustomConfig customConfig;
+
+    @Autowired
+    private GateWayComponent gateWayComponent;
 
     @Autowired
     private ServerHttpBearerAuthenticationConverter converter;
@@ -73,7 +77,7 @@ public class GateWaySecurity {
 //                .formLogin()
 //                .loginPage("/gateway/login")
                 .and()
-                .addFilterAt(new IPFilter(customConfig), SecurityWebFiltersOrder.FIRST)
+                .addFilterAt(new IPFilter(customConfig,gateWayComponent), SecurityWebFiltersOrder.FIRST)
                 .addFilterAt(new JwtAuthenticationFilter(customConfig, converter), SecurityWebFiltersOrder.HTTP_BASIC)
                 .build();
     }

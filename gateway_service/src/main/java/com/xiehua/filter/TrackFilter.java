@@ -57,7 +57,7 @@ public class TrackFilter implements GatewayFilter, XiehuaOrdered {
 
             if (StringUtils.isEmpty(spanId)) spanId = exchange.getRequest().getHeaders().getFirst(HEAD_ITERM_ID);
 
-            Span currentSpan = new Span(traceId, spanId, url, LocalDateTime.now(),null, new ArrayList<>(),null);
+            Span currentSpan = new Span(traceId, spanId, url,null, LocalDateTime.now(),null, new ArrayList<>(),null);
 
             return asyncRW(key,currentSpan,exchange,chain);
 

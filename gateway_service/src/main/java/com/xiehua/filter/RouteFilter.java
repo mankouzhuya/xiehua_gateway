@@ -184,8 +184,18 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
     /**
      * read web exchange to map
      **/
-    private Map<String, String> readReq2Map(ServerWebExchange exchange) {
+    public static Map<String, String> readReq2Map(ServerWebExchange exchange) {
         return exchange.getRequest().getHeaders().entrySet().stream().map(s -> {
+            Tuple2<String, String> t = new Tuple2(s.getKey(), s.getValue().get(0));
+            return t;
+        }).collect(Collectors.toMap(s -> s._1, t -> t._2, (x, y) -> y));
+    }
+
+    /**
+     * read web exchange to map
+     **/
+    public static Map<String, String> readReq2Map(HttpHeaders respHeaders) {
+        return respHeaders.entrySet().stream().map(s -> {
             Tuple2<String, String> t = new Tuple2(s.getKey(), s.getValue().get(0));
             return t;
         }).collect(Collectors.toMap(s -> s._1, t -> t._2, (x, y) -> y));

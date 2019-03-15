@@ -41,6 +41,7 @@
         <commons-io.version>2.6</commons-io.version>
         <javassist.version>3.24.1-GA</javassist.version>
         <google-findbus-jsr305.version>3.0.2</google-findbus-jsr305.version>
+		<guava.version>24.1-jre</guava.version>
 	</properties>
 
 	<dependencies>
@@ -165,6 +166,12 @@
             <version>${google-findbus-jsr305.version}</version>
             <optional>true</optional>
         </dependency>
+		<!-- guava -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>${guava.version}</version>
+		</dependency>
 		<!--lombok-->
 		<dependency>
 			<groupId>org.projectlombok</groupId>

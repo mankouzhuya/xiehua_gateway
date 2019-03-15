@@ -37,8 +37,8 @@ public class CountTool {
     /**
      * 计算执行时间
      **/
-    public void countExecuteTime(Long executeTime, ReqDTO reqDTO) throws JsonProcessingException {
-        if (executeTime < DEFAULT_TIMER) return;
+    public void countExecuteTime(ReqDTO reqDTO) throws JsonProcessingException {
+        if (reqDTO.getExecuteTime() < DEFAULT_TIMER) return;
         //记录耗时较长的接口
         String key = REDIS_GATEWAY_TIMER_REQID_PREFIX + LocalDate.now().toString();
         template.opsForHash()

@@ -1,53 +1,47 @@
 package com.xiehua.component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xiehua.bus.Bus;
 import com.xiehua.cache.SimpleCache;
+import com.xiehua.filter.RouteFilter;
 import com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator;
-import com.xiehua.support.wrap.collect.CountTool;
-import com.xiehua.support.wrap.collect.TrackTool;
 import com.xiehua.support.wrap.dto.ReqDTO;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
-import io.lettuce.core.api.sync.RedisCommands;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
-import static com.xiehua.filter.RouteFilter.HEAD_FROM_ID;
-import static com.xiehua.filter.RouteFilter.HEAD_ITERM_ID;
-import static com.xiehua.filter.RouteFilter.HEAD_REQ_ID;
-import static com.xiehua.support.wrap.collect.CountTool.ATTR_REQ_ITEM;
+import static com.xiehua.filter.RouteFilter.*;
 import static com.xiehua.support.wrap.collect.CountTool.GATEWAY_ATTR_REQ_TIME;
-import static com.xiehua.support.wrap.dto.ReqDTO.REDIS_GATEWAY_TEMP_EXP;
-import static com.xiehua.support.wrap.dto.ReqDTO.REDIS_GATEWAY_TEMP_PREFIX;
+import static com.xiehua.support.wrap.dto.ReqDTO.*;
 
 @Slf4j
 @Component
 public class GateWayComponent {
+
+    public static final String REQ_ORDER = "Req_Order";//请求顺序
 
     @Autowired
     private StatefulRedisConnection<String, String> connection;
@@ -57,12 +51,6 @@ public class GateWayComponent {
 
     @Autowired
     private ObjectMapper mapper;
-
-    @Autowired
-    private CountTool countTool;
-
-    @Autowired
-    private TrackTool trackTool;
 
     public SimpleCache getDefaultCache() {
         return defaultCache;
@@ -86,6 +74,7 @@ public class GateWayComponent {
         if (StringUtils.isEmpty(trackId)) {
             trackId = UUID.randomUUID().toString().replace("-", "");
             builder.header(HEAD_REQ_ID, trackId);
+            exchange.getResponse().getHeaders().put(REQ_ORDER, Arrays.asList("1"));
         }
         exchange.getResponse().getHeaders().put(HEAD_REQ_ID, Arrays.asList(trackId));
         //Requst-From-ID
@@ -97,27 +86,32 @@ public class GateWayComponent {
         ServerWebExchange webExchange = exchange.mutate().request(request).response(exchange.getResponse()).build();
         webExchange.getAttributes().put(GATEWAY_ATTR_REQ_TIME, System.currentTimeMillis());
 
-        return new XiehuaServerWebExchangeDecorator(webExchange, buildReqDTO(exchange, spanId), this);
+        return new XiehuaServerWebExchangeDecorator(webExchange, buildReqDTO(exchange, spanId, trackId,reqFromId), this);
 
     }
 
-    private ReqDTO buildReqDTO(ServerWebExchange exchange, String itemId) {
+    private ReqDTO buildReqDTO(ServerWebExchange exchange, String itemId, String trackId,String fromId) {
         final String uri = exchange.getRequest().getURI().toString();
         final String method = Optional.ofNullable(exchange.getRequest().getMethod()).orElse(HttpMethod.GET).name();
-        final String headers = exchange.getRequest().getHeaders().entrySet().stream().map(s -> s.getKey() + ":[" + String.join(";", s.getValue()) + "]").collect(Collectors.joining("\r\n"));
+        //final String headers = exchange.getRequest().getHeaders().entrySet().stream().map(s -> s.getKey() + ":[" + String.join(";", s.getValue()) + "]").collect(Collectors.joining("\r\n"));
         ReqDTO reqDTO = new ReqDTO();
         reqDTO.setReqId(itemId);
-        String key = defaultCache.genKey(ATTR_REQ_ITEM + itemId);
-        reqDTO.setKey(key);
+        reqDTO.setTrackId(trackId);
+        reqDTO.setFromId(fromId);
         reqDTO.setUrl(uri);
         reqDTO.setMethod(method);
-        reqDTO.setHead(headers);
+        reqDTO.setReqhead(RouteFilter.readReq2Map(exchange));
         reqDTO.setReqTime(LocalDateTime.now());
+        reqDTO.setType(TYPE_SAVE_TEMP);
         return reqDTO;
     }
 
-    public <T extends DataBuffer> T log(T buffer, String trackId, String itemId, String fromId) throws IOException, ExecutionException, InterruptedException {
-        ReqDTO reqDTO = getReqDTO(itemId);
+    public <T extends DataBuffer> T log(T buffer, HttpHeaders respHeaders) throws IOException, ExecutionException, InterruptedException {
+        String trackId = respHeaders.getFirst(HEAD_REQ_ID);
+        String itemId = respHeaders.getFirst(HEAD_ITERM_ID);
+        String fromId = respHeaders.getFirst(HEAD_FROM_ID);
+        ReqDTO reqDTO = getReqDTO(REDIS_GATEWAY_TEMP_PREFIX + trackId, itemId);
+        String reqOrder = respHeaders.getFirst(REQ_ORDER);
         if (reqDTO == null) return buffer;
 
         InputStream dataBuffer = buffer.asInputStream();
@@ -125,17 +119,34 @@ public class GateWayComponent {
         // ByteBufAllocator.DEFAULT
         NettyDataBufferFactory nettyDataBufferFactory = new NettyDataBufferFactory(new UnpooledByteBufAllocator(false));
         String content = new String(bytes);
-        if (!StringUtils.isEmpty(content)) {
-            reqDTO.setRespBody(content);
-            reqDTO.setRespTime(LocalDateTime.now());
-            Long executeTime = LocalDateTime.now().toInstant(ZoneOffset.of("+8")).toEpochMilli() - reqDTO.getReqTime().toInstant(ZoneOffset.of("+8")).toEpochMilli();
-            reqDTO.setExecuteTime(executeTime);
-            log.info("请求响应:{}", mapper.writeValueAsString(reqDTO));
-            //统计时间
-            countTool.countExecuteTime(executeTime, reqDTO);
+        reqDTO.setRespBody(content);
+        reqDTO.setRespTime(LocalDateTime.now());
+        reqDTO.setResphead(RouteFilter.readReq2Map(respHeaders));
+        Long executeTime = LocalDateTime.now().toInstant(ZoneOffset.of("+8")).toEpochMilli() - reqDTO.getReqTime().toInstant(ZoneOffset.of("+8")).toEpochMilli();
+        reqDTO.setExecuteTime(executeTime);
+        reqDTO.setFromId(fromId);
+        log.info("请求响应:{}", mapper.writeValueAsString(reqDTO));
+        reqDTO.setType(TYPE_SAVE_TEMP);
+        //更新响应体
+        Bus.post(reqDTO);
+        //统计时间
+        ReqDTO reqDTO2 = new ReqDTO();
+        BeanUtils.copyProperties(reqDTO, reqDTO2);
+        reqDTO2.setType(TYPE_COUNT_EXEC_TIME);
+        Bus.post(reqDTO2);
+
+        if (!StringUtils.isEmpty(reqOrder)) {//第一个请求响应结束时在去持久化链路信息
             //链路信息持久化
-            trackTool.track(trackId, fromId, reqDTO, executeTime);
+            ReqDTO reqDTO3 = new ReqDTO();
+            BeanUtils.copyProperties(reqDTO2, reqDTO3);
+            HashMap<String, Object> map = new HashMap();
+            map.put("fromId", fromId);
+            map.put("reqOrder", reqOrder);
+            reqDTO3.setBizMap(map);
+            reqDTO3.setType(TYPE_SAVE_TRACK);
+            Bus.post(reqDTO3);
         }
+
         DataBufferUtils.release(buffer);
         return (T) nettyDataBufferFactory.wrap(bytes);
     }
@@ -151,27 +162,14 @@ public class GateWayComponent {
         String content = new String(bytes);
         if (!StringUtils.isEmpty(content)) {
             reqDTO.setReqBody(content);
-            saveReqDTO(reqDTO);
+            Bus.post(reqDTO);
         }
         DataBufferUtils.release(buffer);
         return (T) nettyDataBufferFactory.wrap(bytes);
     }
 
-    public ReqDTO saveReqDTO(ReqDTO reqDTO) {
-        try {
-            RedisAsyncCommands<String, String> commands = asyncCommands();
-            String key = REDIS_GATEWAY_TEMP_PREFIX + reqDTO.getReqId();
-            asyncCommands().set(key, mapper.writeValueAsString(reqDTO));
-            commands.expire(key, REDIS_GATEWAY_TEMP_EXP);
-        } catch (JsonProcessingException e) {
-            log.error("持久化失败:{}", e);
-        } finally {
-            return reqDTO;
-        }
-    }
-
-    public ReqDTO getReqDTO(String key) throws ExecutionException, InterruptedException, IOException {
-        String str = asyncCommands().get(key).get();
+    public ReqDTO getReqDTO(String key, String field) throws ExecutionException, InterruptedException, IOException {
+        String str = asyncCommands().hget(key, field).get();
         if (StringUtils.isEmpty(str)) return null;
         return mapper.readValue(str, ReqDTO.class);
     }

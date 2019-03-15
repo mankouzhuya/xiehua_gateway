@@ -92,6 +92,9 @@ management:
 #    reactor.ipc.netty: DEBUG
 
 #自定义配置
+customer:
+  sampling:
+    rate: 1%
 #jwt配置
 jwt:
   secret: jFCOdJy2Av4PkEPoQj0JGSyBlSbOz7YaGP+NlQVjhlg=

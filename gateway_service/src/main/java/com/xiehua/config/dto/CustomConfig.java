@@ -2,13 +2,12 @@ package com.xiehua.config.dto;
 
 import com.xiehua.config.dto.security.SecurityPermitUrl;
 import com.xiehua.config.dto.white_list.WhiteListPermit;
-import io.jsonwebtoken.security.Keys;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import javax.crypto.SecretKey;
-import java.util.Base64;
+import java.math.BigDecimal;
 import java.util.List;
 
 public class CustomConfig {
@@ -20,6 +19,8 @@ public class CustomConfig {
     private SecretKey jwtSingKey;
 
     private Integer jwtExpiration;
+
+    private BigDecimal customerSamplingRate;//采样率
 
     public CustomConfig(List<SecurityPermitUrl> permitUrls, List<WhiteListPermit> whiteListPermits) {
         this.permitUrls = permitUrls;
@@ -42,6 +43,13 @@ public class CustomConfig {
         this.whiteListPermits = whiteListPermits;
     }
 
+    public BigDecimal getCustomerSamplingRate() {
+        return customerSamplingRate;
+    }
+
+    public void setCustomerSamplingRate(BigDecimal customerSamplingRate) {
+        this.customerSamplingRate = customerSamplingRate;
+    }
 
     public SecretKey getJwtSingKey() {
         return jwtSingKey;

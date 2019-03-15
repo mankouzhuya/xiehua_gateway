@@ -3,6 +3,7 @@ package com.xiehua.component;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiehua.bus.Bus;
 import com.xiehua.cache.SimpleCache;
+import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.filter.RouteFilter;
 import com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator;
 import com.xiehua.support.wrap.dto.ReqDTO;
@@ -25,6 +26,7 @@ import org.springframework.web.server.ServerWebExchange;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
@@ -32,6 +34,7 @@ import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.xiehua.filter.RouteFilter.*;
 import static com.xiehua.support.wrap.collect.CountTool.GATEWAY_ATTR_REQ_TIME;
@@ -52,6 +55,9 @@ public class GateWayComponent {
     @Autowired
     private ObjectMapper mapper;
 
+    @Autowired
+    private CustomConfig config;
+
     public SimpleCache getDefaultCache() {
         return defaultCache;
     }
@@ -63,7 +69,7 @@ public class GateWayComponent {
     /***
      * 变换请求头
      * */
-    public XiehuaServerWebExchangeDecorator mutateWebExchange(ServerWebExchange exchange) {
+    public ServerWebExchange mutateWebExchange(ServerWebExchange exchange) {
         ServerHttpRequest.Builder builder = exchange.getRequest().mutate();
         //spanId
         String spanId = UUID.randomUUID().toString().replace("-", "");
@@ -86,7 +92,13 @@ public class GateWayComponent {
         ServerWebExchange webExchange = exchange.mutate().request(request).response(exchange.getResponse()).build();
         webExchange.getAttributes().put(GATEWAY_ATTR_REQ_TIME, System.currentTimeMillis());
 
-        return new XiehuaServerWebExchangeDecorator(webExchange, buildReqDTO(exchange, spanId, trackId,reqFromId), this);
+        //是否采样
+        BigDecimal seed = BigDecimal.valueOf(ThreadLocalRandom.current().nextDouble(1));
+        if(seed.compareTo(config.getCustomerSamplingRate()) <0){
+            exchange = new XiehuaServerWebExchangeDecorator(webExchange, buildReqDTO(exchange, spanId, trackId,reqFromId), this);
+        }
+
+        return exchange;
 
     }
 
@@ -127,6 +139,12 @@ public class GateWayComponent {
         reqDTO.setFromId(fromId);
         log.info("请求响应:{}", mapper.writeValueAsString(reqDTO));
         reqDTO.setType(TYPE_SAVE_TEMP);
+        if (!StringUtils.isEmpty(reqOrder)) {//第一个请求响应结束时在去持久化链路信息
+            HashMap<String, Object> map = new HashMap();
+            map.put("fromId", fromId);
+            map.put("reqOrder", reqOrder);
+            reqDTO.setBizMap(map);
+        }
         //更新响应体
         Bus.post(reqDTO);
         //统计时间
@@ -134,19 +152,6 @@ public class GateWayComponent {
         BeanUtils.copyProperties(reqDTO, reqDTO2);
         reqDTO2.setType(TYPE_COUNT_EXEC_TIME);
         Bus.post(reqDTO2);
-
-        if (!StringUtils.isEmpty(reqOrder)) {//第一个请求响应结束时在去持久化链路信息
-            //链路信息持久化
-            ReqDTO reqDTO3 = new ReqDTO();
-            BeanUtils.copyProperties(reqDTO2, reqDTO3);
-            HashMap<String, Object> map = new HashMap();
-            map.put("fromId", fromId);
-            map.put("reqOrder", reqOrder);
-            reqDTO3.setBizMap(map);
-            reqDTO3.setType(TYPE_SAVE_TRACK);
-            Bus.post(reqDTO3);
-        }
-
         DataBufferUtils.release(buffer);
         return (T) nettyDataBufferFactory.wrap(bytes);
     }

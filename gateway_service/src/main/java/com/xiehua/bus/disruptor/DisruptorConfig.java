@@ -1,21 +1,20 @@
 package com.xiehua.bus.disruptor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xiehua.bus.Bus;
 import com.xiehua.bus.Msghandler;
 import com.xiehua.support.wrap.collect.CountTool;
 import com.xiehua.support.wrap.collect.TrackTool;
-import io.lettuce.core.api.StatefulRedisConnection;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 
 @Configuration
 //多实例几个消费者
 public class DisruptorConfig {
 
     @Autowired
-    private StatefulRedisConnection<String, String> connection;
+    private ReactiveRedisTemplate<String, String> template;
 
     @Autowired
     private ObjectMapper mapper;
@@ -28,7 +27,7 @@ public class DisruptorConfig {
 
     @Bean
     public Msghandler msghandler() {
-        Msghandler msghandler = new Msghandler(connection,mapper,countTool,trackTool);
+        Msghandler msghandler = new Msghandler(template, mapper, countTool, trackTool);
         return msghandler;
     }
 

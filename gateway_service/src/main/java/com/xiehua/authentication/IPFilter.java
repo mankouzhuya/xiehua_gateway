@@ -70,7 +70,7 @@ public class IPFilter implements WebFilter {
         //permit all url
         List<String> urls = Optional.ofNullable(config.getPermitUrls()).orElseThrow(RuntimeException::new).stream().map(s -> s.getUrl()).collect(Collectors.toList());
         urls.addAll(URL_PERMIT_ALL);
-        XiehuaServerWebExchangeDecorator webExchangeDecorator = gateWayComponent.mutateWebExchange(exchange);
+        ServerWebExchange webExchangeDecorator = gateWayComponent.mutateWebExchange(exchange);
         for (String url : urls) {
             if (antPathMatcher.match(url, webExchangeDecorator.getRequest().getPath().value())) return chain.filter(webExchangeDecorator);
         }

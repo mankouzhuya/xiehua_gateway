@@ -94,7 +94,7 @@ management:
 #自定义配置
 customer:
   sampling:
-    rate: 1%
+    rate: 100%
 #jwt配置
 jwt:
   secret: jFCOdJy2Av4PkEPoQj0JGSyBlSbOz7YaGP+NlQVjhlg=

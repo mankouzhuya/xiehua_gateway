@@ -75,31 +75,44 @@ public class GateWayComponent {
         String spanId = UUID.randomUUID().toString().replace("-", "");
         builder.header(HEAD_ITERM_ID, spanId);
         exchange.getResponse().getHeaders().put(HEAD_ITERM_ID, Arrays.asList(spanId));
-        //track id
-        String trackId = exchange.getRequest().getHeaders().getFirst(HEAD_REQ_ID);
-        if (StringUtils.isEmpty(trackId)) {
-            trackId = UUID.randomUUID().toString().replace("-", "");
-            builder.header(HEAD_REQ_ID, trackId);
-            exchange.getResponse().getHeaders().put(REQ_ORDER, Arrays.asList("1"));
-        }
-        exchange.getResponse().getHeaders().put(HEAD_REQ_ID, Arrays.asList(trackId));
         //Requst-From-ID
         String reqFromId = exchange.getRequest().getHeaders().getFirst(HEAD_FROM_ID);
         if (!StringUtils.isEmpty(reqFromId)) {
             exchange.getResponse().getHeaders().put(HEAD_FROM_ID, Arrays.asList(reqFromId));
+            exchange.getResponse().getHeaders().put(HEAD_ITERM_ID, Arrays.asList(reqFromId));
         }
-        ServerHttpRequest request = builder.build();
-        ServerWebExchange webExchange = exchange.mutate().request(request).response(exchange.getResponse()).build();
-        webExchange.getAttributes().put(GATEWAY_ATTR_REQ_TIME, System.currentTimeMillis());
-
         //是否采样
-        BigDecimal seed = BigDecimal.valueOf(ThreadLocalRandom.current().nextDouble(1));
-        if(seed.compareTo(config.getCustomerSamplingRate()) <0){
-            exchange = new XiehuaServerWebExchangeDecorator(webExchange, buildReqDTO(exchange, spanId, trackId,reqFromId), this);
+        //track id
+        String  trackId= exchange.getRequest().getHeaders().getFirst(HEAD_REQ_ID);
+        //trackId为空
+        if(StringUtils.isEmpty(trackId)){
+            trackId = UUID.randomUUID().toString().replace("-", "");
+            exchange.getResponse().getHeaders().put(REQ_ORDER, Arrays.asList("1"));
+            BigDecimal seed = BigDecimal.valueOf(ThreadLocalRandom.current().nextDouble(1));
+            if(seed.compareTo(config.getCustomerSamplingRate()) < 0){//需要采样
+                trackId+="@";
+                return buildExchange(builder,exchange,trackId,spanId,reqFromId,true);
+            }
+            //不需要采样
+            return buildExchange(builder,exchange,trackId,spanId,reqFromId,false);
         }
+        //trackId不为空
+        if(trackId.endsWith("@")){//需要采样
+            return buildExchange(builder,exchange,trackId,spanId,reqFromId,true);
+        }
+        return buildExchange(builder,exchange,trackId,spanId,reqFromId,false);
+    }
 
+    private ServerWebExchange buildExchange(ServerHttpRequest.Builder builder,ServerWebExchange exchange,String trackId,String spanId,String reqFromId,Boolean isSample){
+        builder.header(HEAD_REQ_ID, trackId);
+        exchange.getResponse().getHeaders().put(HEAD_REQ_ID, Arrays.asList(trackId));
+
+        ServerHttpRequest request = builder.build();
+        exchange = exchange.mutate().request(request).response(exchange.getResponse()).build();
+        if(isSample){
+            return new XiehuaServerWebExchangeDecorator(exchange, buildReqDTO(exchange, spanId, trackId,reqFromId), this);
+        }
         return exchange;
-
     }
 
     private ReqDTO buildReqDTO(ServerWebExchange exchange, String itemId, String trackId,String fromId) {

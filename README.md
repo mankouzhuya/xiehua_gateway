@@ -1,6 +1,6 @@
 # xiehua_gateway
 this is a java gateway project,And the project is dependent on spring cloud gateway and spring security.add dynamic route rule support and jwt support.   
-features:   
+features:(支持集群部署)   
 1.基于spring cloud gateway 2.0.0.RELEASE   
 2.使用spring security + JWT 做安全校验   
 3.IP白名单   

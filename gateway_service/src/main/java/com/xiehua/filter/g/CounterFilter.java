@@ -28,7 +28,6 @@ import java.util.UUID;
 import static com.xiehua.filter.RouteFilter.HEAD_ITERM_ID;
 import static com.xiehua.filter.TrackFilter.EXP_SECONDS;
 import static com.xiehua.support.wrap.collect.CountTool.ATTR_REQ_ITEM;
-import static com.xiehua.support.wrap.collect.CountTool.GATEWAY_ATTR_REQ_TIME;
 
 /**
  * 打印请求参数及统计执行时长过滤器
@@ -61,7 +60,6 @@ public class CounterFilter implements GlobalFilter, XiehuaOrdered {
         ServerHttpRequest request = builder.build();
         ServerWebExchange webExchange = exchange.mutate().request(request).response(exchange.getResponse()).build();
 
-        webExchange.getAttributes().put(GATEWAY_ATTR_REQ_TIME, System.currentTimeMillis());
         webExchange.getAttributes().put(ATTR_REQ_ITEM, buildReqDTO(exchange, itemId));
 
 

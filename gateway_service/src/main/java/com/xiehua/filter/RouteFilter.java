@@ -5,43 +5,31 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiehua.cache.SimpleCache;
 import com.xiehua.cache.dto.SimpleKvDTO;
-import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.enums.ClientField;
 import com.xiehua.exception.BizException;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
 import io.vavr.Tuple2;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
-import org.springframework.cloud.gateway.route.Route;
 import org.springframework.data.redis.core.ReactiveHashOperations;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
-import java.net.URI;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.xiehua.component.GateWayComponent.readReq2Map;
-import static com.xiehua.config.secruity.jwt.converter.ServerHttpBearerAuthenticationConverter.GATEWAY_ATTR_JWT;
 import static com.xiehua.filter.Authenticcation.GATEWAY_ATTR_SERVER_NAME;
-import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.*;
 
 
 @Slf4j
@@ -64,10 +52,9 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
     private SimpleCache defaultCache;
 
 
-
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String serviceName = (String) exchange.getAttributes().get(GATEWAY_ATTR_SERVER_NAME);
+        String serviceName = ((String) exchange.getAttributes().get(GATEWAY_ATTR_SERVER_NAME)).toUpperCase();
         return Mono.just(exchange)
                 .publishOn(Schedulers.elastic())
                 .flatMap(m -> {
@@ -83,12 +70,10 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
     }
 
 
-
-
     /**
      * query route from redis
      **/
-    private Map<String, String> queryRouteInfo(ServerWebExchange exchange, String serviceName){
+    private Map<String, String> queryRouteInfo(ServerWebExchange exchange, String serviceName) {
         //request info
         Map<String, String> map = readReq2Map(exchange);
         List<String> list = Arrays.asList(ClientField.values()).stream().map(s -> {
@@ -112,36 +97,37 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
                     Tuple2<String, String> t = new Tuple2(temp[0], temp[1]);
                     return t;
                 }).collect(Collectors.toMap(m -> m._1, n -> n._2, (x, y) -> y));
-        if(CollectionUtils.isEmpty(fmap)) throw new BizException(serviceKey + "路由规则未配置(redis):"+list.toString());
+        if (CollectionUtils.isEmpty(fmap)) throw new BizException(serviceKey + "路由规则未配置(redis):" + list.toString());
         return fmap;
     }
 
 
     //load config form local cache
-    private List<SimpleKvDTO> loadLocalCache(String service)  {
+    private List<SimpleKvDTO> loadLocalCache(String service) {
         //query local cache
         String key = defaultCache.genKey(service);
         String value = defaultCache.get(key);
-        if(!StringUtils.isBlank(value)) {
+        if (!StringUtils.isBlank(value)) {
             try {
-                return mapper.readValue(value,new TypeReference<List<SimpleKvDTO>>() {});
+                return mapper.readValue(value, new TypeReference<List<SimpleKvDTO>>() {
+                });
             } catch (IOException e) {
-                log.error("反序列化失败:{}",e);
+                log.error("反序列化失败:{}", e);
             }
         }
         //query redis
-        ReactiveHashOperations<String,String,String> opsForHash = template.opsForHash();
-        List<SimpleKvDTO> rules = opsForHash.entries(service).map(s->{
+        ReactiveHashOperations<String, String, String> opsForHash = template.opsForHash();
+        List<SimpleKvDTO> rules = opsForHash.entries(service).map(s -> {
             SimpleKvDTO dto = new SimpleKvDTO();
             dto.setKey(s.getKey());
             dto.setValue(s.getValue());
             return dto;
         }).collectList().block();
-        if(CollectionUtils.isEmpty(rules)) throw new RuntimeException(service + "路由规则未配置(redis)");
+        if (CollectionUtils.isEmpty(rules)) throw new RuntimeException(service + "路由规则未配置(redis)");
         try {
-            defaultCache.put(key,mapper.writeValueAsString(rules));
+            defaultCache.put(key, mapper.writeValueAsString(rules));
         } catch (JsonProcessingException e) {
-            log.error("序列化失败:{}",e);
+            log.error("序列化失败:{}", e);
         }
         return rules;
     }

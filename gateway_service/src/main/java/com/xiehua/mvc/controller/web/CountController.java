@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
  * 网关web登录
  * **/
 @Controller
-@RequestMapping("/gateway/count")
+@RequestMapping("/xiehua_gateway/count")
 public class CountController {
 
     @Autowired

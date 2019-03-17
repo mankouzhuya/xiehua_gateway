@@ -91,7 +91,7 @@ public class GateWaySecurity {
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .pathMatchers(permitUrls.toArray(new String[permitUrls.size()])).permitAll()
                 .pathMatchers(protectUrls.toArray(new String[protectUrls.size()])).hasRole(SecurityRoleEnum.role_inner_protected.getRole())
-                .pathMatchers("/gateway/**").hasRole("GATEWAY_ADMIN")//网关登录配置角色
+                .pathMatchers("/xiehua_gateway/**").hasRole(SecurityRoleEnum.role_gateway_admin.getRole())//网关登录配置角色
                 .pathMatchers("/order_center/private_sleep/**").hasRole("ADMIN")
                 .anyExchange().authenticated()
 //                .and()
@@ -99,7 +99,7 @@ public class GateWaySecurity {
 //                .loginPage("/gateway/login")
                 .and()
                 .addFilterAt(new IPFilter(customConfig, gateWayComponent, authenticationManager, securityContextRepository, authenticationSuccessHandler), SecurityWebFiltersOrder.FIRST)
-                .addFilterAt(new JwtAuthenticationFilter(converter, authenticationManager, securityContextRepository, authenticationSuccessHandler), SecurityWebFiltersOrder.HTTP_BASIC)
+                .addFilterAt(new JwtAuthenticationFilter(customConfig,converter, authenticationManager, securityContextRepository, authenticationSuccessHandler), SecurityWebFiltersOrder.HTTP_BASIC)
                 .build();
     }
 

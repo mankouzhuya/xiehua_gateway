@@ -18,7 +18,7 @@ import java.util.Arrays;
  * 网关web api
  * **/
 @Controller
-@RequestMapping("/gateway/service")
+@RequestMapping("/xiehua_gateway/service")
 public class GateWayController {
 
     @Autowired

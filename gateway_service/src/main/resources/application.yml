@@ -104,8 +104,8 @@ jwt:
 #不需要权限验证的地址
 security:
   permitUrl: '[
-              {"name":"网关登录","url":"/gateway/login"},
-              {"name":"网关登录","url":"/gateway/login/**"},
+              {"name":"网关登录","url":"/xiehua_gateway/login"},
+              {"name":"网关登录","url":"/xiehua_gateway/login/**"},
               {"name":"调用失败(服务降级)","url":"/fallback/**"}
               ]'
 

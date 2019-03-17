@@ -3,12 +3,13 @@ package com.xiehua.filter;
 import com.xiehua.component.GateWayComponent;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.secruity.jwt.XiehuaAuthenticationToken;
+import com.xiehua.exception.BizException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.web.server.authentication.ServerAuthenticationSuccessHandler;
 import org.springframework.security.web.server.context.ServerSecurityContextRepository;
-import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -16,26 +17,18 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 import static com.xiehua.config.dto.white_list.WhiteListPermit.DEFAULT_WHITE_GID;
-import static com.xiehua.config.secruity.GateWaySecurity.URL_PERMIT_ALL;
 
 
 @Slf4j
 public class IPFilter extends Authenticcation implements WebFilter {
 
-
-    private CustomConfig config;
-
     private GateWayComponent gateWayComponent;
 
     private AntPathMatcher antPathMatcher = new AntPathMatcher();
 
-    public IPFilter(CustomConfig config,GateWayComponent gateWayComponent,ReactiveAuthenticationManager authenticationManager, ServerSecurityContextRepository securityContextRepository, ServerAuthenticationSuccessHandler authenticationSuccessHandler) {
-        super(authenticationManager, securityContextRepository, authenticationSuccessHandler);
+    public IPFilter(CustomConfig config, GateWayComponent gateWayComponent, ReactiveAuthenticationManager authenticationManager, ServerSecurityContextRepository securityContextRepository, ServerAuthenticationSuccessHandler authenticationSuccessHandler) {
+        super(config, authenticationManager, securityContextRepository, authenticationSuccessHandler);
         this.config = config;
         this.gateWayComponent = gateWayComponent;
     }
@@ -54,14 +47,17 @@ public class IPFilter extends Authenticcation implements WebFilter {
         //OPTIONS 请求不处理
         if (exchange.getRequest().getMethod().equals(HttpMethod.OPTIONS)) return exchange.getResponse().setComplete();
 
-        exchange.getAttributes().put(GATEWAY_ATTR_SERVER_NAME, getServiceName(exchange));
+        //server_id
+        String path = exchange.getRequest().getURI().getPath();
+        if (StringUtils.isEmpty(path)) throw new BizException("访问路径不合法:{}", path);
+        String[] serverIds = path.split("/");
+        if (serverIds == null || serverIds.length < 1) throw new BizException("访问的 service id 不存在");
+        exchange.getAttributes().put(GATEWAY_ATTR_SERVER_NAME, serverIds[1]);
 
         //permit all url
-        List<String> permitUrls = Optional.ofNullable(config.getPermitUrls()).orElseThrow(RuntimeException::new).stream().map(s -> s.getUrl()).collect(Collectors.toList());
-        permitUrls.addAll(URL_PERMIT_ALL);
         ServerWebExchange webExchangeDecorator = gateWayComponent.mutateWebExchange(exchange);
-        if (permitUrls.stream().anyMatch(s -> antPathMatcher.match(s, webExchangeDecorator.getRequest().getPath().value())))
-            return chain.filter(webExchangeDecorator);
+        if (checkPermitUrls(webExchangeDecorator)) return chain.filter(webExchangeDecorator);
+
         //white list chekc
         return checkWhiteList(webExchangeDecorator, chain);
     }

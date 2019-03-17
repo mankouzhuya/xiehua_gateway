@@ -40,7 +40,6 @@ public class JWTAuthenticationSuccessHandler implements ServerAuthenticationSucc
         ServerWebExchange exchange = webFilterExchange.getExchange();
         XiehuaAuthenticationToken xiehuaAuthenticationToken = (XiehuaAuthenticationToken) authentication;
         Claims claims = xiehuaAuthenticationToken.getClaims();
-        LocalDateTime exp = claims.getExpiration().toInstant().atZone(ZoneOffset.systemDefault()).toLocalDateTime();
         //访问退出登录接口
         if (exchange.getRequest().getURI().getRawPath().contains("logout")){
             String accunt = claims.getAudience();

@@ -198,7 +198,7 @@
         var xhr = new XMLHttpRequest();
         //设置请求的类型及url
         //post请求一定要添加请求头才行不然会报错
-        xhr.open('post', '/gateway/service/rule');
+        xhr.open('post', '/xiehua_gateway/service/rule');
         xhr.setRequestHeader("Content-type","application/json; charset=utf-8");
         //发送请求
         xhr.send(JSON.stringify(json));
@@ -233,7 +233,7 @@
         var xhr = new XMLHttpRequest();
         //设置请求的类型及url
         //post请求一定要添加请求头才行不然会报错
-        xhr.open('post', '/gateway/service/rule_d');
+        xhr.open('post', '/xiehua_gateway/service/rule_d');
         xhr.setRequestHeader("Content-type","application/json; charset=utf-8");
         //发送请求
         xhr.send(JSON.stringify(json));
@@ -249,7 +249,7 @@
 
     /**在线人数统计**/
     function online_count() {
-        $.get("/gateway/service/online_count", function(result){
+        $.get("/xiehua_gateway/service/online_count", function(result){
             alert("当前系统在线人数为: " + result + " 人");
         });
     }
@@ -265,7 +265,7 @@
             alert("查询账号不能为空");
             return;
         }
-        $.get( '/gateway/service/is_onLine?account='+ account, function(result){
+        $.get( '/xiehua_gateway/service/is_onLine?account='+ account, function(result){
             alert("查询结果为:" + result);
         });
     }
@@ -304,7 +304,7 @@
         var xhr = new XMLHttpRequest();
         //设置请求的类型及url
         //post请求一定要添加请求头才行不然会报错
-        xhr.open('post', '/gateway/service/user_permissions');
+        xhr.open('post', '/xiehua_gateway/service/user_permissions');
         xhr.setRequestHeader("Content-type","application/json; charset=utf-8");
         //发送请求
         xhr.send(JSON.stringify(json));
@@ -326,7 +326,7 @@
             alert("用户账户不能为空");
             return;
         }
-        $.get("/gateway/service/user_permissions?account=" + account, function(result){
+        $.get("/xiehua_gateway/service/user_permissions?account=" + account, function(result){
             alert(JSON.stringify(result));
         });
     }

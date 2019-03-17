@@ -12,14 +12,15 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Slf4j
 public class JwtAuthenticationFilter extends Authenticcation implements WebFilter {
 
     private ServerHttpBearerAuthenticationConverter converter;
 
-    public JwtAuthenticationFilter(ServerHttpBearerAuthenticationConverter converter,ReactiveAuthenticationManager authenticationManager, ServerSecurityContextRepository securityContextRepository, ServerAuthenticationSuccessHandler authenticationSuccessHandler) {
-        super(authenticationManager, securityContextRepository, authenticationSuccessHandler);
+    public JwtAuthenticationFilter(CustomConfig config,ServerHttpBearerAuthenticationConverter converter,ReactiveAuthenticationManager authenticationManager, ServerSecurityContextRepository securityContextRepository, ServerAuthenticationSuccessHandler authenticationSuccessHandler) {
+        super(config,authenticationManager, securityContextRepository, authenticationSuccessHandler);
         this.converter = converter;
     }
 
@@ -34,12 +35,7 @@ public class JwtAuthenticationFilter extends Authenticcation implements WebFilte
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        return ReactiveSecurityContextHolder.getContext().flatMap(s -> {
-            if (s == null) {
-                return converter.apply(exchange).flatMap(i -> authenticate(exchange, chain, i));
-            } else {
-                return chain.filter(exchange);
-            }
-        });
+        if(checkPermitUrls(exchange)) return chain.filter(exchange);
+        return converter.apply(exchange).publishOn(Schedulers.elastic()).flatMap(i -> authenticate(exchange, chain, i));
     }
 }

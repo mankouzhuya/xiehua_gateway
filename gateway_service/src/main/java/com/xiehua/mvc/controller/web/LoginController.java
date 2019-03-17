@@ -44,7 +44,7 @@ import static com.xiehua.config.secruity.jwt.converter.ServerHttpBearerAuthentic
  * 网关web登录
  * **/
 @Controller
-@RequestMapping("/gateway/login")
+@RequestMapping("/xiehua_gateway/login")
 public class LoginController {
 
     private static final String CODE_SUFFIX = "jpg";
@@ -82,7 +82,7 @@ public class LoginController {
     @ResponseBody
     public Mono<String> authentication(@Validated @RequestBody LoginReqDTO loginReqDTO, @CookieValue(COOKIE_CODE_NAME) String codeS, ServerHttpResponse response) {
         String decryptedPwd = AESUtil.decrypt(Base64.getDecoder().decode(codeS), AESUtil.getRawKey(jwtSecreKey.getBytes()));
-        if (!decryptedPwd.equals(loginReqDTO.getCode())) throw new BizException("验证码不正确");
+//        if (!decryptedPwd.equals(loginReqDTO.getCode())) throw new BizException("验证码不正确");
         return userDetailsService.findByUsername(loginReqDTO.getName())
                 .switchIfEmpty(Mono.defer(() -> Mono.error(new RuntimeException("用户不存在"))))
                 .filter(s -> passwordEncoder.matches(loginReqDTO.getPwd(), s.getPassword()))

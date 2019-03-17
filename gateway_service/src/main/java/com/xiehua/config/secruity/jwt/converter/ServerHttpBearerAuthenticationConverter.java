@@ -88,11 +88,11 @@ public class ServerHttpBearerAuthenticationConverter implements Function<ServerW
                 //parser token
                 .map(i -> {
                     String serviceName = (String) serverWebExchange.getAttributes().get(GATEWAY_ATTR_SERVER_NAME);
+                    Claims claims = Jwts.parser().setSigningKey(customConfig.getJwtSingKey()).parseClaimsJws(i).getBody();
+                    claims.put(GATEWAY_ATTR_SERVER_NAME, serviceName);
                     if (serviceName.equals(applicationName)) {//access gateway web console
-                        return new XiehuaAuthenticationToken(null, GATEWAY_LOGIN_ACCOUNT);
+                        return new XiehuaAuthenticationToken(null, GATEWAY_LOGIN_ACCOUNT,null,claims);
                     } else {
-                        Claims claims = Jwts.parser().setSigningKey(customConfig.getJwtSingKey()).parseClaimsJws(i).getBody();
-                        claims.put(GATEWAY_ATTR_SERVER_NAME, serviceName);
                         return new XiehuaAuthenticationToken(null, claims,null,claims);
                     }
                 });

@@ -99,7 +99,8 @@ public class JWTReactiveAuthenticationManager implements ReactiveAuthenticationM
             if (credential.equals(GATEWAY_LOGIN_ACCOUNT)) {//访问web控制台
                 List<GrantedAuthority> list = Arrays.asList(SecurityRoleEnum.role_gateway_admin.getFullRole()).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
                 UserDetails userDetails = new JwtUser(GATEWAY_LOGIN_GID, GATEWAY_LOGIN_ACCOUNT, GATEWAY_LOGIN_PWD, applicationName, list);
-                return Mono.just(new XiehuaAuthenticationToken(userDetails, DEFAULT_WHITE_GID, userDetails.getAuthorities()));
+                XiehuaAuthenticationToken xiehuaAuthenticationToken= (XiehuaAuthenticationToken) authentication;
+                return Mono.just(new XiehuaAuthenticationToken(userDetails, DEFAULT_WHITE_GID, userDetails.getAuthorities(),xiehuaAuthenticationToken.getClaims()));
             }
         }
         if (credentials instanceof Claims) {

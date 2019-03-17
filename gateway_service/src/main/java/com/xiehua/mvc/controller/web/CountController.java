@@ -1,5 +1,6 @@
 package com.xiehua.mvc.controller.web;
 
+import com.xiehua.mvc.controller.dto.SysNameDTO;
 import com.xiehua.mvc.service.GateWayService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,7 +28,7 @@ public class CountController {
     @GetMapping("/index")
     public Mono<String> login(final Model model,@CookieValue(HttpHeaders.AUTHORIZATION) String authentication) {
         model.addAttribute(gateWayService.countIndexRespDTO(authentication));
-        model.addAttribute("service_name",applicationName);
+        model.addAttribute(new SysNameDTO(applicationName));
         return Mono.create(monoSink -> monoSink.success("count_index"));
     }
 

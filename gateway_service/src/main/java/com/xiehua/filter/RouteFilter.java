@@ -97,7 +97,10 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
                     Tuple2<String, String> t = new Tuple2(temp[0], temp[1]);
                     return t;
                 }).collect(Collectors.toMap(m -> m._1, n -> n._2, (x, y) -> y));
-        if (CollectionUtils.isEmpty(fmap)) throw new BizException(serviceKey + "路由规则未配置(redis):" + list.toString());
+        if (CollectionUtils.isEmpty(fmap)) {
+            log.error(serviceKey + "路由规则未配置(redis):" + list.toString());
+            throw new BizException(serviceKey + "路由规则未配置(redis):" + list.toString());
+        }
         return fmap;
     }
 
@@ -123,7 +126,10 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
             dto.setValue(s.getValue());
             return dto;
         }).collectList().block();
-        if (CollectionUtils.isEmpty(rules)) throw new RuntimeException(service + "路由规则未配置(redis)");
+        if (CollectionUtils.isEmpty(rules)) {
+            log.error(service + "路由规则未配置(redis)");
+            throw new RuntimeException(service + "路由规则未配置(redis)");
+        };
         try {
             defaultCache.put(key, mapper.writeValueAsString(rules));
         } catch (JsonProcessingException e) {

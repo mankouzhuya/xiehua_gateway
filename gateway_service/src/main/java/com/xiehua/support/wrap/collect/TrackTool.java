@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiehua.fun.Try;
 import com.xiehua.support.wrap.dto.ReqDTO;
-import com.xiehua.track.Span;
+import com.xiehua.support.wrap.dto.track.Span;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ public class TrackTool {
 
     public static final String REDIS_GATEWAY_TRACK = "gateway:track:req_";//redis track
 
-    public static final Long EXP_SECONDS = 60 * 5L;//过期时间(5分钟)
+    public static final Long EXP_SECONDS = 60 * 60 * 24 * 1L;//过期时间(1天)
 
     @Autowired
     private ObjectMapper mapper;

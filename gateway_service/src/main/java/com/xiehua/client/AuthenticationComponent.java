@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
-@Component
+//@Component
 public class AuthenticationComponent {
 
     private static final WebClient client = WebClient.create("http://example.org");

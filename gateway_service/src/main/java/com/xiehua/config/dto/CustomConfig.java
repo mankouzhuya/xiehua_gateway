@@ -68,18 +68,4 @@ public class CustomConfig {
     }
 
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Getter
-    public enum SecurityRoleEnum {
-
-        role_inner_protected("INNER_PROTECTED","ROLE_INNER_PROTECTED","内部受保护的接口权限");
-
-        private String role;
-
-        private String fullRole;
-
-        private String showName;
-
-    }
 }

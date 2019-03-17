@@ -1,7 +1,6 @@
 package com.xiehua.filter;
 
 import com.google.common.collect.ImmutableSet;
-import com.xiehua.authentication.IPFilter;
 import es.moki.ratelimitj.core.limiter.request.RequestLimitRule;
 import es.moki.ratelimitj.redis.request.RedisSlidingWindowRequestRateLimiter;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -17,7 +16,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.concurrent.TimeUnit;
 
-import static com.xiehua.filter.RouteFilter.HEAD_REQ_ID;
+import static com.xiehua.component.GateWayComponent.HEAD_REQ_ID;
 
 
 @Slf4j

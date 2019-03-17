@@ -87,29 +87,26 @@ public class JWTReactiveAuthenticationManager implements ReactiveAuthenticationM
      */
     @Override
     public Mono<Authentication> authenticate(Authentication authentication) {
-        Object credentials = authentication.getCredentials();
+        XiehuaAuthenticationToken xiehuaAuthenticationToken= (XiehuaAuthenticationToken) authentication;
+        Object credentials = xiehuaAuthenticationToken.getCredentials();
         if (credentials == null) throw new BizException("票据不能为空");
         if (credentials instanceof String) {
             String credential = (String) credentials;
             if (credential.equals(DEFAULT_WHITE_GID)) {//白名单用户访问
                 List<GrantedAuthority> list = Arrays.asList(SecurityRoleEnum.role_inner_protected.getFullRole()).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
                 UserDetails userDetails = new JwtUser(DEFAULT_WHITE_GID, DEFAULT_WHITE_ACCOUNT, DEFAULT_WHITE_PWD, applicationName, list);
-                return Mono.just(new XiehuaAuthenticationToken(userDetails, DEFAULT_WHITE_GID, userDetails.getAuthorities()));
+                return Mono.just(new XiehuaAuthenticationToken(userDetails, DEFAULT_WHITE_GID, userDetails.getAuthorities(),xiehuaAuthenticationToken.getClaims()));
             }
             if (credential.equals(GATEWAY_LOGIN_ACCOUNT)) {//访问web控制台
                 List<GrantedAuthority> list = Arrays.asList(SecurityRoleEnum.role_gateway_admin.getFullRole()).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
                 UserDetails userDetails = new JwtUser(GATEWAY_LOGIN_GID, GATEWAY_LOGIN_ACCOUNT, GATEWAY_LOGIN_PWD, applicationName, list);
-                XiehuaAuthenticationToken xiehuaAuthenticationToken= (XiehuaAuthenticationToken) authentication;
                 return Mono.just(new XiehuaAuthenticationToken(userDetails, DEFAULT_WHITE_GID, userDetails.getAuthorities(),xiehuaAuthenticationToken.getClaims()));
             }
         }
         if (credentials instanceof Claims) {
             Claims credential = (Claims) credentials;
             if (StringUtils.isEmpty(credential.getSubject())) throw new BadCredentialsException("票据不合法");
-
-            String serviceName = (String) credential.get(GATEWAY_ATTR_SERVER_NAME);
-            credential.remove(GATEWAY_ATTR_SERVER_NAME);
-            String grantedAuthoritys = loadLocalCache(credential.getSubject(), serviceName);
+            String grantedAuthoritys = loadLocalCache(credential.getSubject(), xiehuaAuthenticationToken.getServiceName());
             return Mono.just(buildAuthenticationToken(credential, grantedAuthoritys));
         }
 

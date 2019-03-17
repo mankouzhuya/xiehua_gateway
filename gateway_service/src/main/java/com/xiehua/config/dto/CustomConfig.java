@@ -22,6 +22,8 @@ public class CustomConfig {
 
     private BigDecimal customerSamplingRate;//采样率
 
+    private String applicationName;
+
     public CustomConfig(List<SecurityPermitUrl> permitUrls, List<WhiteListPermit> whiteListPermits) {
         this.permitUrls = permitUrls;
         this.whiteListPermits = whiteListPermits;
@@ -67,5 +69,11 @@ public class CustomConfig {
         this.jwtExpiration = jwtExpiration;
     }
 
+    public String getApplicationName() {
+        return applicationName;
+    }
 
+    public void setApplicationName(String applicationName) {
+        this.applicationName = applicationName;
+    }
 }

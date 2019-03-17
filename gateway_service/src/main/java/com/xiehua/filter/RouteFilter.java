@@ -54,7 +54,7 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        String serviceName = ((String) exchange.getAttributes().get(GATEWAY_ATTR_SERVER_NAME)).toUpperCase();
+        String serviceName = (String) exchange.getAttributes().get(GATEWAY_ATTR_SERVER_NAME);
         return Mono.just(exchange)
                 .publishOn(Schedulers.elastic())
                 .flatMap(m -> {

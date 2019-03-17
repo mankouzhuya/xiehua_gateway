@@ -37,6 +37,7 @@ import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Date;
 
+import static com.xiehua.config.AppConfig.APPLICATION_NAME;
 import static com.xiehua.config.dto.white_list.WhiteListPermit.GATEWAY_LOGIN_GID;
 import static com.xiehua.config.secruity.jwt.converter.ServerHttpBearerAuthenticationConverter.BEARER;
 
@@ -44,7 +45,7 @@ import static com.xiehua.config.secruity.jwt.converter.ServerHttpBearerAuthentic
  * 网关web登录
  * **/
 @Controller
-@RequestMapping("/xiehua_gateway/login")
+@RequestMapping("/"+APPLICATION_NAME+"/login")
 public class LoginController {
 
     private static final String CODE_SUFFIX = "jpg";
@@ -75,6 +76,7 @@ public class LoginController {
 
     @GetMapping("")
     public Mono<String> login(final Model model) {
+        model.addAttribute("service_name",applicationName);
         return Mono.create(monoSink -> monoSink.success("login"));
     }
 

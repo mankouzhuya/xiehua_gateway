@@ -5,6 +5,7 @@ import com.xiehua.mvc.controller.dto.*;
 import com.xiehua.mvc.service.GateWayService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,15 +15,20 @@ import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
 
+import static com.xiehua.config.AppConfig.APPLICATION_NAME;
+
 /***
  * 网关web api
  * **/
 @Controller
-@RequestMapping("/xiehua_gateway/service")
+@RequestMapping("/"+APPLICATION_NAME+"/service")
 public class GateWayController {
 
     @Autowired
     private GateWayService gateWayService;
+
+    @Value("${spring.application.name:xiehua_gateway}")
+    private String applicationName;
 
 
     /***
@@ -31,6 +37,7 @@ public class GateWayController {
     @GetMapping("/index")
     public Mono<String> login(final Model model, @CookieValue(HttpHeaders.AUTHORIZATION) String authentication) {
         model.addAttribute(gateWayService.index(authentication));
+        model.addAttribute("service_name",applicationName);
         return Mono.create(monoSink -> monoSink.success("index"));
     }
 

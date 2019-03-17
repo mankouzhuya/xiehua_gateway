@@ -28,7 +28,7 @@
             <label for="code">验证码:</label>
             <div style="width: 100%;height: 0.8em">&nbsp;</div>
             <input type="text" class="form-control" id="code" placeholder="请输入验证码">&nbsp;&nbsp;&nbsp;&nbsp;
-            <img src="/xiehua_gateway/login/code2" class="img-fluid" alt="Responsive image">
+            <img src="/${service_name}/login/code2" class="img-fluid" alt="Responsive image">
         </div>
         <div class="form-group">
 
@@ -52,7 +52,7 @@
         var xhr = new XMLHttpRequest();
         //设置请求的类型及url
         //post请求一定要添加请求头才行不然会报错
-        xhr.open('post', '/xiehua_gateway/login' );
+        xhr.open('post', '/${service_name}/login' );
         xhr.setRequestHeader("Content-type","application/json; charset=utf-8");
         //发送请求
         xhr.send(JSON.stringify(getJsonData()));

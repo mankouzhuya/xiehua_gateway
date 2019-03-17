@@ -10,6 +10,8 @@ public class XiehuaAuthenticationToken extends UsernamePasswordAuthenticationTok
 
     private Claims claims;
 
+    private String serviceName;
+
     public XiehuaAuthenticationToken(Object principal, Object credentials) {
         super(principal, credentials);
     }
@@ -23,11 +25,27 @@ public class XiehuaAuthenticationToken extends UsernamePasswordAuthenticationTok
         this.claims = claims;
     }
 
+    public XiehuaAuthenticationToken(Object principal, Object credentials,Claims claims,String serviceName) {
+        super(principal, credentials);
+        this.claims = claims;
+        this.serviceName = serviceName;
+    }
+
     public Claims getClaims() {
         return claims;
+    }
+
+    public String getServiceName() {
+        return serviceName;
+    }
+
+    public void setServiceName(String serviceName) {
+        this.serviceName = serviceName;
     }
 
     public void setClaims(Claims claims) {
         this.claims = claims;
     }
+
+
 }

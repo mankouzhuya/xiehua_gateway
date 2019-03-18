@@ -22,6 +22,8 @@ public class CustomConfig {
 
     private BigDecimal customerSamplingRate;//采样率
 
+    private String applicationName;
+
     public CustomConfig(List<SecurityPermitUrl> permitUrls, List<WhiteListPermit> whiteListPermits) {
         this.permitUrls = permitUrls;
         this.whiteListPermits = whiteListPermits;
@@ -67,19 +69,11 @@ public class CustomConfig {
         this.jwtExpiration = jwtExpiration;
     }
 
+    public String getApplicationName() {
+        return applicationName;
+    }
 
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Getter
-    public enum SecurityRoleEnum {
-
-        role_inner_protected("INNER_PROTECTED","ROLE_INNER_PROTECTED","内部受保护的接口权限");
-
-        private String role;
-
-        private String fullRole;
-
-        private String showName;
-
+    public void setApplicationName(String applicationName) {
+        this.applicationName = applicationName;
     }
 }

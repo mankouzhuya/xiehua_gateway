@@ -1,15 +1,15 @@
 package com.xiehua.component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xiehua.bus.Bus;
+import com.xiehua.bus.jvm.Bus;
 import com.xiehua.cache.SimpleCache;
 import com.xiehua.config.dto.CustomConfig;
-import com.xiehua.filter.RouteFilter;
 import com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator;
 import com.xiehua.support.wrap.dto.ReqDTO;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.vavr.Tuple2;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.BeanUtils;
@@ -29,15 +29,11 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
-import static com.xiehua.filter.RouteFilter.*;
-import static com.xiehua.support.wrap.collect.CountTool.GATEWAY_ATTR_REQ_TIME;
 import static com.xiehua.support.wrap.dto.ReqDTO.*;
 
 @Slf4j
@@ -45,6 +41,12 @@ import static com.xiehua.support.wrap.dto.ReqDTO.*;
 public class GateWayComponent {
 
     public static final String REQ_ORDER = "Req_Order";//请求顺序
+
+    public static final String HEAD_REQ_ID = "Request-ID";//global request id,write to request head
+
+    public static final String HEAD_ITERM_ID = "Requst-Iterm-ID";//每个单独请求分配一共req id
+
+    public static final String HEAD_FROM_ID = "Requst-From-ID";//每个单独请求分配一共req id
 
     @Autowired
     private StatefulRedisConnection<String, String> connection;
@@ -125,7 +127,7 @@ public class GateWayComponent {
         reqDTO.setFromId(fromId);
         reqDTO.setUrl(uri);
         reqDTO.setMethod(method);
-        reqDTO.setReqhead(RouteFilter.readReq2Map(exchange));
+        reqDTO.setReqhead(readReq2Map(exchange));
         reqDTO.setReqTime(LocalDateTime.now());
         reqDTO.setType(TYPE_SAVE_TEMP);
         return reqDTO;
@@ -146,7 +148,7 @@ public class GateWayComponent {
         String content = new String(bytes);
         reqDTO.setRespBody(content);
         reqDTO.setRespTime(LocalDateTime.now());
-        reqDTO.setResphead(RouteFilter.readReq2Map(respHeaders));
+        reqDTO.setResphead(readReq2Map(respHeaders));
         Long executeTime = LocalDateTime.now().toInstant(ZoneOffset.of("+8")).toEpochMilli() - reqDTO.getReqTime().toInstant(ZoneOffset.of("+8")).toEpochMilli();
         reqDTO.setExecuteTime(executeTime);
         reqDTO.setFromId(fromId);
@@ -190,6 +192,26 @@ public class GateWayComponent {
         String str = asyncCommands().hget(key, field).get();
         if (StringUtils.isEmpty(str)) return null;
         return mapper.readValue(str, ReqDTO.class);
+    }
+
+    /**
+     * read web exchange to map
+     **/
+    public static Map<String, String> readReq2Map(ServerWebExchange exchange) {
+        return exchange.getRequest().getHeaders().entrySet().stream().map(s -> {
+            Tuple2<String, String> t = new Tuple2(s.getKey(), s.getValue().get(0));
+            return t;
+        }).collect(Collectors.toMap(s -> s._1, t -> t._2, (x, y) -> y));
+    }
+
+    /**
+     * read web exchange to map
+     **/
+    public static Map<String, String> readReq2Map(HttpHeaders respHeaders) {
+        return respHeaders.entrySet().stream().map(s -> {
+            Tuple2<String, String> t = new Tuple2(s.getKey(), s.getValue().get(0));
+            return t;
+        }).collect(Collectors.toMap(s -> s._1, t -> t._2, (x, y) -> y));
     }
 
     private RedisAsyncCommands<String, String> asyncCommands() {

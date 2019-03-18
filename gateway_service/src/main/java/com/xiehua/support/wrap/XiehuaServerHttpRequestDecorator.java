@@ -1,6 +1,6 @@
 package com.xiehua.support.wrap;
 
-import com.xiehua.bus.Bus;
+import com.xiehua.bus.jvm.Bus;
 import com.xiehua.component.GateWayComponent;
 import com.xiehua.fun.Try;
 import com.xiehua.support.wrap.dto.ReqDTO;

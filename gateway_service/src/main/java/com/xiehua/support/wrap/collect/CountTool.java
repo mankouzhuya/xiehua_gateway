@@ -17,11 +17,7 @@ import java.time.format.DateTimeFormatter;
 @Component
 public class CountTool {
 
-    public static final String GATEWAY_ATTR_REQ_TIME = "gateway_attr_req_time";//发起请求时间
-
     public static final String REDIS_GATEWAY_TIMER_REQID_PREFIX = "gateway:timer:count_";
-
-    public static final String ATTR_REQ_ITEM = "attr_req_item";
 
     public static DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 

@@ -15,6 +15,18 @@ import java.util.List;
 @ToString
 public class WhiteListPermit {
 
+    public static final String DEFAULT_WHITE_GID = "xiehua_gid";//内部白名单默认用户
+
+    public static final String DEFAULT_WHITE_ACCOUNT = "xiehua_account";
+
+    public static final String DEFAULT_WHITE_PWD = "xiehua_pwd";
+
+    public static final String GATEWAY_LOGIN_GID = "xiehua_gateway_admin";//登录网关默认用户
+
+    public static final String GATEWAY_LOGIN_ACCOUNT = "xiehua_gateway_admin";
+
+    public static final String GATEWAY_LOGIN_PWD = "xiehua_gateway_admin";
+
     private String name;
     private String url;
     private List<String> ip;

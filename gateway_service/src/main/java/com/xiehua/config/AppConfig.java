@@ -8,6 +8,7 @@ import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.dto.security.SecurityPermitUrl;
 import com.xiehua.config.dto.white_list.WhiteListPermit;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
@@ -29,10 +30,11 @@ import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Configuration
 public class AppConfig {
 
-    private static final Logger logger = LoggerFactory.getLogger(AppConfig.class);
+    public static final String APPLICATION_NAME = "xiehua_gateway";
 
     @Value("${http.maxTotal:30}")
     private int maxTotal;
@@ -63,6 +65,9 @@ public class AppConfig {
 
     @Value("${customer.sampling.rate:1%}")
     private String customerSamplingRate;
+
+    @Value("${spring.application.name:xiehua_gateway}")
+    private String applicationName;
 
 
     @Bean
@@ -130,6 +135,7 @@ public class AppConfig {
         config.setJwtSingKey(Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtSecreKey)));
         //采样率
         config.setCustomerSamplingRate(BigDecimal.valueOf(Double.parseDouble(customerSamplingRate.replace("%", ""))*0.01));
+        config.setApplicationName(applicationName);
         return config;
         // return new CustomConfig(null,null);
     }
@@ -139,7 +145,7 @@ public class AppConfig {
             return mapper.readValue(securityPermitUrl, new TypeReference<List<SecurityPermitUrl>>() {
             });
         } catch (IOException e) {
-            logger.error("解析sso config 配置项permit url错误", e);
+            log.error("解析sso config 配置项permit url错误", e);
             return null;
         }
     }
@@ -149,9 +155,13 @@ public class AppConfig {
             return mapper.readValue(whiteListPermit, new TypeReference<List<WhiteListPermit>>() {
             });
         } catch (IOException e) {
-            logger.error("解析sso config 配置项ip permit错误", e);
+            log.error("解析sso config 配置项ip permit错误", e);
             return null;
         }
+    }
+
+    public String getApplicationName(){
+        return applicationName;
     }
 
 

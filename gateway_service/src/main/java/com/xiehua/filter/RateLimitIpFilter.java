@@ -1,7 +1,6 @@
 package com.xiehua.filter;
 
 import com.google.common.collect.ImmutableSet;
-import com.xiehua.authentication.IPFilter;
 import es.moki.ratelimitj.core.limiter.request.RequestLimitRule;
 import es.moki.ratelimitj.redis.request.RedisSlidingWindowRequestRateLimiter;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -17,7 +16,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.concurrent.TimeUnit;
 
-import static com.xiehua.filter.RouteFilter.HEAD_REQ_ID;
+import static com.xiehua.component.GateWayComponent.HEAD_REQ_ID;
 
 
 @Slf4j
@@ -45,7 +44,7 @@ public class RateLimitIpFilter implements GatewayFilter, XiehuaOrdered {
         commands.set(key, EXP_SECONDS + "");
         commands.expire(key, EXP_SECONDS);
 
-        String ip = IPFilter.getIpAddr(exchange);
+        String ip = JwtAuthenticationFilter.getIpAddr(exchange);
         if (new RedisSlidingWindowRequestRateLimiter(connection, rules).overLimitWhenIncremented(ip)) {
             log.warn("请求数超过阈值ip:{}", ip);
             exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);

@@ -7,7 +7,6 @@ import com.xiehua.config.secruity.jwt.JWTAuthenticationSuccessHandler;
 import com.xiehua.config.secruity.jwt.JWTReactiveAuthenticationManager;
 import com.xiehua.config.secruity.jwt.JWTSecurityContextRepository;
 import com.xiehua.config.secruity.jwt.converter.ServerHttpBearerAuthenticationConverter;
-import com.xiehua.filter.IPFilter;
 import com.xiehua.filter.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -98,8 +97,7 @@ public class GateWaySecurity {
 //                .formLogin()
 //                .loginPage("/gateway/login")
                 .and()
-                .addFilterAt(new IPFilter(customConfig, gateWayComponent, authenticationManager, securityContextRepository, authenticationSuccessHandler), SecurityWebFiltersOrder.FIRST)
-                .addFilterAt(new JwtAuthenticationFilter(customConfig,converter, authenticationManager, securityContextRepository, authenticationSuccessHandler), SecurityWebFiltersOrder.HTTP_BASIC)
+                .addFilterAt(new JwtAuthenticationFilter(customConfig, gateWayComponent, converter,authenticationManager, securityContextRepository, authenticationSuccessHandler), SecurityWebFiltersOrder.HTTP_BASIC)
                 .build();
     }
 

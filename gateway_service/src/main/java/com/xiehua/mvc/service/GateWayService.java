@@ -66,11 +66,9 @@ public class GateWayService {
      **/
     public IndexRespDTO index(@NotBlank(message = "认证信息不能为空") String authentication) {
         IndexRespDTO respDTO = new IndexRespDTO(Jwts.parser().setSigningKey(customConfig.getJwtSingKey()).parseClaimsJws(authentication).getBody().getSubject());
-        ReactiveHashOperations<String, String, String> opsForHash = template.opsForHash();
         List<IndexRespDTO.Service> serviceList = routeLocator.getRoutes().filter(s -> s.getFilters().contains(filter)).publishOn(Schedulers.elastic()).map(s -> {
             IndexRespDTO.Service service = new IndexRespDTO.Service();
             String serviceName = s.getUri().getHost();
-            if(serviceName.contains("-")) serviceName = serviceName.replace("-","_");
             List<IndexRespDTO.Rule> list = template.opsForHash().entries(REDIS_GATEWAY_SERVICE_RULE + serviceName).map(m -> {
                 String key = (String) m.getKey();
                 String value = (String) m.getValue();

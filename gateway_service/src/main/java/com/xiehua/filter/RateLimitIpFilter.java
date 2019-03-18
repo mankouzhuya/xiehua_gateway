@@ -44,7 +44,7 @@ public class RateLimitIpFilter implements GatewayFilter, XiehuaOrdered {
         commands.set(key, EXP_SECONDS + "");
         commands.expire(key, EXP_SECONDS);
 
-        String ip = IPFilter.getIpAddr(exchange);
+        String ip = JwtAuthenticationFilter.getIpAddr(exchange);
         if (new RedisSlidingWindowRequestRateLimiter(connection, rules).overLimitWhenIncremented(ip)) {
             log.warn("请求数超过阈值ip:{}", ip);
             exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);

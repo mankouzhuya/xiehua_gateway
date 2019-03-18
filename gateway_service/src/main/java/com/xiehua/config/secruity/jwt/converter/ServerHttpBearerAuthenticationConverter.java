@@ -89,7 +89,9 @@ public class ServerHttpBearerAuthenticationConverter implements Function<ServerW
                 .map(i -> {
                     String serviceName = (String) serverWebExchange.getAttributes().get(GATEWAY_ATTR_SERVER_NAME);
                     Claims claims = Jwts.parser().setSigningKey(customConfig.getJwtSingKey()).parseClaimsJws(i).getBody();
-                    if (serviceName.equals(applicationName)) {//access gateway web console
+                    String tempName = applicationName.toUpperCase();
+                    if(tempName.contains("_")) tempName = tempName.replace("_","-");
+                    if (serviceName.equals(applicationName) || serviceName.equals(tempName)) {//access gateway web console
                         return new XiehuaAuthenticationToken(null, GATEWAY_LOGIN_ACCOUNT,claims,serviceName);
                     } else {
                         return new XiehuaAuthenticationToken(null, claims,claims,serviceName);

@@ -3,7 +3,6 @@ package com.xiehua.config.secruity.jwt;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiehua.bus.jvm.Bus;
 import com.xiehua.fun.Try;
-import io.vavr.Tuple2;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
@@ -13,11 +12,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.stream.Collectors;
+import static com.xiehua.config.dto.white_list.WhiteListPermit.DEFAULT_WHITE_GID;
+import static com.xiehua.config.dto.white_list.WhiteListPermit.GATEWAY_LOGIN_ACCOUNT;
 
 @Slf4j
 @Component
@@ -34,14 +30,15 @@ public class JWTSecurityContextRepository implements ServerSecurityContextReposi
 
     @Override
     public Mono<Void> save(ServerWebExchange serverWebExchange, SecurityContext securityContext) {
-        serverWebExchange.getAttributes().put(REDIS_GATEWAY_LOGIN_PREFIX,securityContext.getAuthentication().getCredentials());
-        Bus.post(securityContext);
+        serverWebExchange.getAttributes().put(REDIS_GATEWAY_LOGIN_PREFIX, securityContext.getAuthentication().getCredentials());
+        String credentials = (String) securityContext.getAuthentication().getCredentials();
+        if (!DEFAULT_WHITE_GID.equals(credentials) && !GATEWAY_LOGIN_ACCOUNT.equals(credentials)) Bus.post(securityContext);
         return Mono.empty();
     }
 
     @Override
     public Mono<SecurityContext> load(ServerWebExchange serverWebExchange) {
-        String key = REDIS_GATEWAY_LOGIN_PREFIX + (String)serverWebExchange.getAttributes().get(REDIS_GATEWAY_LOGIN_PREFIX);
-        return template.opsForValue().get(key).switchIfEmpty(Mono.empty()).flatMap(Try.of(s ->Mono.just(mapper.readValue(s,SecurityContext.class))));
+        String key = REDIS_GATEWAY_LOGIN_PREFIX + (String) serverWebExchange.getAttributes().get(REDIS_GATEWAY_LOGIN_PREFIX);
+        return template.opsForValue().get(key).switchIfEmpty(Mono.empty()).flatMap(Try.of(s -> Mono.just(mapper.readValue(s, SecurityContext.class))));
     }
 }

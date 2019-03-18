@@ -5,8 +5,10 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.server.WebFilterExchange;
 import org.springframework.security.web.server.authentication.ServerAuthenticationSuccessHandler;
@@ -21,6 +23,7 @@ import java.util.Arrays;
 import java.util.Date;
 
 import static com.xiehua.config.secruity.jwt.JWTSecurityContextRepository.REDIS_GATEWAY_LOGIN_PREFIX;
+import static com.xiehua.config.secruity.jwt.converter.ServerHttpBearerAuthenticationConverter.BEARER;
 
 @Slf4j
 @Component
@@ -31,12 +34,14 @@ public class JWTAuthenticationSuccessHandler implements ServerAuthenticationSucc
     @Autowired
     private CustomConfig customConfig;
 
+    @Value("${jwt.domain}")
+    private String domain;
+
     @Autowired
     private ReactiveRedisTemplate<String, String> template;
 
     @Override
     public Mono<Void> onAuthenticationSuccess(WebFilterExchange webFilterExchange, Authentication authentication) {
-        log.info("认证成功~");
         ServerWebExchange exchange = webFilterExchange.getExchange();
         XiehuaAuthenticationToken xiehuaAuthenticationToken = (XiehuaAuthenticationToken) authentication;
         Claims claims = xiehuaAuthenticationToken.getClaims();
@@ -48,8 +53,16 @@ public class JWTAuthenticationSuccessHandler implements ServerAuthenticationSucc
         }
 
         //update response
-        claims.setExpiration(Date.from(LocalDateTime.now().plusSeconds(customConfig.getJwtExpiration()).atZone(ZoneId.systemDefault()).toInstant()));
-        exchange.getResponse().getHeaders().put(HttpHeaders.AUTHORIZATION, Arrays.asList(Jwts.builder().setClaims(claims).signWith(customConfig.getJwtSingKey()).compact()));
+        Date exp = Date.from(LocalDateTime.now().plusSeconds(customConfig.getJwtExpiration()).atZone(ZoneId.systemDefault()).toInstant());
+        claims.setExpiration(exp);
+        String token = Jwts.builder().setClaims(claims).signWith(customConfig.getJwtSingKey()).compact();
+        exchange.getResponse().getHeaders().put(HttpHeaders.AUTHORIZATION, Arrays.asList(BEARER + token));
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(HttpHeaders.AUTHORIZATION, token)
+                .httpOnly(true)
+                .domain(domain)
+                .path("/")
+                .maxAge(customConfig.getJwtExpiration());
+        exchange.getResponse().addCookie(cookieBuilder.build());
         return webFilterExchange.getChain().filter(exchange);
     }
 

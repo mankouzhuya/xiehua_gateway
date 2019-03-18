@@ -4,7 +4,6 @@ import com.google.code.kaptcha.impl.DefaultKaptcha;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.mvc.controller.dto.LoginReqDTO;
 import com.xiehua.utils.encrypt.aes.AESUtil;
-import com.xiehua.exception.BizException;
 import io.jsonwebtoken.Jwts;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

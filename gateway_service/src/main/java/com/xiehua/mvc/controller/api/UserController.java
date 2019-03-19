@@ -8,11 +8,13 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
+import static com.xiehua.config.AppConfig.APPLICATION_NAME;
+
 /***
  * 网关内部服务接口(用户接口)
  * **/
 @RestController
-@RequestMapping("/gateway/api")
+@RequestMapping("/"+APPLICATION_NAME+"/api")
 public class UserController {
 
     @Autowired

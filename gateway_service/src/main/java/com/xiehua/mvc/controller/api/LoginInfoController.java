@@ -9,11 +9,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
+import static com.xiehua.config.AppConfig.APPLICATION_NAME;
+
 /***
  * 网关内部服务接口(登录信息查询接口)
  * **/
 @RestController
-@RequestMapping("/gateway/api")
+@RequestMapping("/" + APPLICATION_NAME + "/api")
 public class LoginInfoController {
 
     @Autowired

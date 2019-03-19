@@ -1,10 +1,10 @@
 package com.xiehua.bus.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xiehua.cache.SimpleCache;
-import com.xiehua.mvc.controller.dto.AddPermissionsReqDTO;
-import com.xiehua.mvc.controller.dto.AddRule2ReqDTO;
 import com.xiehua.bus.redis.dto.XiehuaMessage;
+import com.xiehua.cache.SimpleCache;
+import com.xiehua.mvc.controller.dto.BroadcastRulesDTO;
+import com.xiehua.mvc.controller.dto.BroadcastUserPermissionsDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,9 +14,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.io.IOException;
 
+import static com.xiehua.bus.redis.dto.XiehuaMessage.*;
 import static com.xiehua.config.secruity.jwt.JWTReactiveAuthenticationManager.REDIS_GATEWAY_USER_POWER_PREFIX;
 import static com.xiehua.filter.RouteFilter.REDIS_GATEWAY_SERVICE_RULE;
-import static com.xiehua.bus.redis.dto.XiehuaMessage.*;
 
 public class XiehuaRedisListener implements MessageListener {
 
@@ -57,10 +57,9 @@ public class XiehuaRedisListener implements MessageListener {
      * 更新用户信息,此时content是AddPermissionsReqDTO的实例
      * **/
     private void updateUserInfo(String content) throws IOException {
-        AddPermissionsReqDTO addPermissionsReqDTO = mapper.readValue(content,AddPermissionsReqDTO.class);
-        String key = defaultCache.genKey(REDIS_GATEWAY_USER_POWER_PREFIX + addPermissionsReqDTO.getAccount());
-        if(!defaultCache.exist(key)) return;
-        defaultCache.put(key,mapper.writeValueAsString(addPermissionsReqDTO.getPermissions()));
+        BroadcastUserPermissionsDTO broadcastUserPermissionsDTO = mapper.readValue(content,BroadcastUserPermissionsDTO.class);
+        String key = defaultCache.genKey(REDIS_GATEWAY_USER_POWER_PREFIX + broadcastUserPermissionsDTO.getGid());
+        defaultCache.put(key,broadcastUserPermissionsDTO.getUserPermissions());
     }
 
     /***
@@ -76,10 +75,9 @@ public class XiehuaRedisListener implements MessageListener {
      * 更新路由信息,此时AddRule2ReqDTO的实例
      * **/
     private void updateRouteInfo(String content) throws IOException {
-        AddRule2ReqDTO addRule2ReqDTO = mapper.readValue(content, AddRule2ReqDTO.class);
-        String key = defaultCache.genKey(REDIS_GATEWAY_SERVICE_RULE + addRule2ReqDTO.getService());
-        if(!defaultCache.exist(key)) return;
-        defaultCache.put(key,mapper.writeValueAsString(addRule2ReqDTO.getRules()));
+        BroadcastRulesDTO broadcastRulesDTO = mapper.readValue(content, BroadcastRulesDTO.class);
+        String key = defaultCache.genKey(REDIS_GATEWAY_SERVICE_RULE + broadcastRulesDTO.getService());
+        defaultCache.put(key,broadcastRulesDTO.getRules());
     }
 
     /***

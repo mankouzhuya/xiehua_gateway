@@ -12,6 +12,8 @@ import org.springframework.util.DigestUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -20,15 +22,15 @@ public class DefaultCache implements SimpleCache {
 
     public static final String REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC = "redis_gateway_update_localcache_topic";
 
-    private static LoadingCache<String, String> cache = CacheBuilder.newBuilder()
+    private static LoadingCache<String, Object> cache = CacheBuilder.newBuilder()
             .maximumSize(1000000)//最多存放1000000个数据
             .expireAfterAccess(7, TimeUnit.DAYS)//缓存7天，7天之后进行回收
             .recordStats()//开启，记录状态数据功能
-            .build(new CacheLoader<String, String>() {
+            .build(new CacheLoader<String, Object>() {
                 @Override
-                public String load(String key) throws Exception {
+                public Object load(String key) throws Exception {
                     // TODO Auto-generated method stub
-                    return "";
+                    return null;
                 }
             });
 
@@ -37,7 +39,7 @@ public class DefaultCache implements SimpleCache {
      * 获取一条数据
      **/
     @Override
-    public String get(String key) {
+    public Object get(String key) {
         return cache.getIfPresent(key);
     }
 
@@ -45,20 +47,15 @@ public class DefaultCache implements SimpleCache {
      * 获取全部数据
      **/
     @Override
-    public List<SimpleKvDTO> getAll() {
-        return cache.asMap().entrySet().stream().map(s -> {
-            SimpleKvDTO r = new SimpleKvDTO();
-            r.setKey(s.getKey());
-            r.setValue(s.getValue());
-            return r;
-        }).collect(Collectors.toList());
+    public Map<String, Object> getAll() {
+        return cache.asMap();
     }
 
     /**
      * 添加一条数据
      **/
     @Override
-    public String put(String key, String value) {
+    public Object put(String key, Object value) {
         cache.put(key, value);
         return value;
     }
@@ -68,7 +65,7 @@ public class DefaultCache implements SimpleCache {
      **/
     @Override
     public Boolean exist(String key) {
-        return StringUtils.isBlank(cache.getIfPresent(key));
+        return Objects.isNull(cache.getIfPresent(key));
     }
 
     /**

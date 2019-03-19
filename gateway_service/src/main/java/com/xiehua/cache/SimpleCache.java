@@ -3,23 +3,24 @@ package com.xiehua.cache;
 import com.xiehua.cache.dto.SimpleKvDTO;
 
 import java.util.List;
+import java.util.Map;
 
 public interface SimpleCache {
 
     /**
      * 获取一条数据
      **/
-    String get(String key);
+    Object get(String key);
 
     /**
      * 获取全部数据
      **/
-    List<SimpleKvDTO> getAll();
+    Map<String, Object> getAll();
 
     /**
      * 添加一条数据
      **/
-    String put(String key, String value);
+    Object put(String key, Object value);
 
 
     /**

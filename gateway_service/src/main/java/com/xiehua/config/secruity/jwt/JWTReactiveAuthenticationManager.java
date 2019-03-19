@@ -19,11 +19,9 @@
  */
 package com.xiehua.config.secruity.jwt;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiehua.cache.SimpleCache;
 import com.xiehua.cache.dto.SimpleKvDTO;
+import com.xiehua.component.GateWayComponent;
 import com.xiehua.config.dto.jwt.JwtUser;
 import com.xiehua.config.enums.SecurityRoleEnum;
 import com.xiehua.exception.BizException;
@@ -31,8 +29,6 @@ import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.ReactiveHashOperations;
-import org.springframework.data.redis.core.ReactiveRedisOperations;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.core.Authentication;
@@ -44,13 +40,12 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.xiehua.config.dto.white_list.WhiteListPermit.*;
-import static com.xiehua.filter.Authenticcation.GATEWAY_ATTR_SERVER_NAME;
 
 /**
  * An authentication manager intended to authenticate a JWT exchange
@@ -71,13 +66,11 @@ public class JWTReactiveAuthenticationManager implements ReactiveAuthenticationM
     private String applicationName;
 
     @Autowired
-    private ReactiveRedisOperations<String, String> operations;
+    private GateWayComponent gateWayComponent;
 
     @Autowired
     private SimpleCache defaultCache;
 
-    @Autowired
-    private ObjectMapper mapper;
 
     /**
      * Successfully authenticate an Authentication object
@@ -87,7 +80,7 @@ public class JWTReactiveAuthenticationManager implements ReactiveAuthenticationM
      */
     @Override
     public Mono<Authentication> authenticate(Authentication authentication) {
-        XiehuaAuthenticationToken xiehuaAuthenticationToken= (XiehuaAuthenticationToken) authentication;
+        XiehuaAuthenticationToken xiehuaAuthenticationToken = (XiehuaAuthenticationToken) authentication;
         Object credentials = xiehuaAuthenticationToken.getCredentials();
         if (credentials == null) throw new BizException("票据不能为空");
         if (credentials instanceof String) {
@@ -95,12 +88,12 @@ public class JWTReactiveAuthenticationManager implements ReactiveAuthenticationM
             if (credential.equals(DEFAULT_WHITE_GID)) {//白名单用户访问
                 List<GrantedAuthority> list = Arrays.asList(SecurityRoleEnum.role_inner_protected.getFullRole()).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
                 UserDetails userDetails = new JwtUser(DEFAULT_WHITE_GID, DEFAULT_WHITE_ACCOUNT, DEFAULT_WHITE_PWD, applicationName, list);
-                return Mono.just(new XiehuaAuthenticationToken(userDetails, DEFAULT_WHITE_GID, userDetails.getAuthorities(),xiehuaAuthenticationToken.getClaims()));
+                return Mono.just(new XiehuaAuthenticationToken(userDetails, DEFAULT_WHITE_GID, userDetails.getAuthorities(), xiehuaAuthenticationToken.getClaims()));
             }
             if (credential.equals(GATEWAY_LOGIN_ACCOUNT)) {//访问web控制台
                 List<GrantedAuthority> list = Arrays.asList(SecurityRoleEnum.role_gateway_admin.getFullRole()).stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
                 UserDetails userDetails = new JwtUser(GATEWAY_LOGIN_GID, GATEWAY_LOGIN_ACCOUNT, GATEWAY_LOGIN_PWD, applicationName, list);
-                return Mono.just(new XiehuaAuthenticationToken(userDetails, DEFAULT_WHITE_GID, userDetails.getAuthorities(),xiehuaAuthenticationToken.getClaims()));
+                return Mono.just(new XiehuaAuthenticationToken(userDetails, DEFAULT_WHITE_GID, userDetails.getAuthorities(), xiehuaAuthenticationToken.getClaims()));
             }
         }
         if (credentials instanceof Claims) {
@@ -125,42 +118,27 @@ public class JWTReactiveAuthenticationManager implements ReactiveAuthenticationM
         return REDIS_GATEWAY_USER_POWER_PREFIX + gid;
     }
 
-    private ReactiveHashOperations<String, String, String> operater() {
-        ReactiveHashOperations<String, String, String> hashOperations = operations.opsForHash();
-        return hashOperations;
-    }
 
     //load config form local cache
     private String loadLocalCache(String subject, String host) {
-        String k = genKey(subject);
-        String key = defaultCache.genKey(k);
-        String value = defaultCache.get(key);
-        List<String> permissions;
-        if (!StringUtils.isEmpty(value)) {
-            try {
-                List<SimpleKvDTO> list = mapper.readValue(value, new TypeReference<List<SimpleKvDTO>>() {
-                });
-                permissions = list.stream().filter(s -> s.getKey().equals(host)).map(m -> m.getValue()).collect(Collectors.toList());
-                if (CollectionUtils.isEmpty(permissions)) throw new BadCredentialsException("你没有权限访问该系统");
-                return permissions.get(0);
-            } catch (IOException e) {
-                log.error("反序列化失败:{}", e);
-            }
+        String redisKey = genKey(subject);
+        String localKey = defaultCache.genKey(redisKey);
+        Object localValue = defaultCache.get(localKey);
+        if (!Objects.isNull(localValue)) {
+            List<SimpleKvDTO> userPermissions = (List<SimpleKvDTO>) localValue;
+            return getUserPermissions(userPermissions, host);
         }
         //query redis
-        List<SimpleKvDTO> userPermissions = operater().entries(k).map(s -> {
-            SimpleKvDTO dto = new SimpleKvDTO();
-            dto.setKey(s.getKey());
-            dto.setValue(s.getValue());
-            return dto;
-        }).collectList().block();
+        List<SimpleKvDTO> userPermissions = gateWayComponent.synGetUserPermissionsByRedis(redisKey);
         if (CollectionUtils.isEmpty(userPermissions)) throw new BadCredentialsException("你没有权限访问该系统");
-        try {
-            defaultCache.put(key, mapper.writeValueAsString(userPermissions));
-        } catch (JsonProcessingException e) {
-            log.error("序列化失败:{}", e);
-        }
-        permissions = userPermissions.stream().filter(s -> s.getKey().equals(host)).map(m -> m.getValue()).collect(Collectors.toList());
+        //put user permissions to local cache
+        defaultCache.put(localKey, userPermissions);
+        return getUserPermissions(userPermissions, host);
+
+    }
+
+    private String getUserPermissions(List<SimpleKvDTO> userPermissions, String host) {
+        List<String> permissions = userPermissions.stream().filter(s -> s.getKey().equals(host)).map(m -> m.getValue()).collect(Collectors.toList());
         if (CollectionUtils.isEmpty(permissions)) throw new BadCredentialsException("你没有权限访问该系统");
         return permissions.get(0);
     }

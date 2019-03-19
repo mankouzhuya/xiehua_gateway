@@ -3,6 +3,7 @@ package com.xiehua.component;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiehua.bus.jvm.Bus;
 import com.xiehua.cache.SimpleCache;
+import com.xiehua.cache.dto.SimpleKvDTO;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.support.wrap.XiehuaServerWebExchangeDecorator;
 import com.xiehua.support.wrap.dto.ReqDTO;
@@ -17,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
+import org.springframework.data.redis.core.ReactiveHashOperations;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -50,6 +53,9 @@ public class GateWayComponent {
 
     @Autowired
     private StatefulRedisConnection<String, String> connection;
+
+    @Autowired
+    private ReactiveRedisTemplate<String, String> template;
 
     @Autowired
     private SimpleCache defaultCache;
@@ -216,5 +222,15 @@ public class GateWayComponent {
 
     private RedisAsyncCommands<String, String> asyncCommands() {
         return connection.async();
+    }
+
+    public List<SimpleKvDTO> synGetUserPermissionsByRedis(String redisKey){
+        ReactiveHashOperations<String, String, String> hashOperations = template.opsForHash();
+        return hashOperations.entries(redisKey).map(s -> {
+            SimpleKvDTO dto = new SimpleKvDTO();
+            dto.setKey(s.getKey());
+            dto.setValue(s.getValue());
+            return dto;
+        }).collectList().block();
     }
 }

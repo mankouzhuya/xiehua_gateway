@@ -3,7 +3,7 @@ package com.xiehua.mvc.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiehua.bus.redis.dto.XiehuaMessage;
-import com.xiehua.cache.dto.SimpleKvDTO;
+import com.xiehua.component.GateWayComponent;
 import com.xiehua.config.dto.CustomConfig;
 import com.xiehua.config.dto.jwt.JwtUser;
 import com.xiehua.filter.RateLimitIpFilter;
@@ -27,6 +27,7 @@ import javax.validation.constraints.NotBlank;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.xiehua.bus.redis.dto.XiehuaMessage.*;
@@ -51,6 +52,9 @@ public class GateWayService {
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private GateWayComponent gateWayComponent;
 
     @Autowired
     private RouteLocator routeLocator;
@@ -132,19 +136,14 @@ public class GateWayService {
     private void notifyUpdateRule(String service) throws JsonProcessingException {
         //query redis
         ReactiveHashOperations<String, String, String> opsForHash = template.opsForHash();
-        List<SimpleKvDTO> rules = opsForHash.entries(service).map(s -> {
-            SimpleKvDTO dto = new SimpleKvDTO();
-            dto.setKey(s.getKey());
-            dto.setValue(s.getValue());
-            return dto;
-        }).collectList().block();
+        Map<String, String> rules = opsForHash.entries(REDIS_GATEWAY_SERVICE_RULE + service).collectMap(s -> s.getKey(), t -> t.getValue()).block();
 
-        AddRule2ReqDTO addRule2ReqDTO = new AddRule2ReqDTO();
-        addRule2ReqDTO.setRules(rules);
-        addRule2ReqDTO.setService(service);
+        BroadcastRulesDTO broadcastRulesDTO = new BroadcastRulesDTO();
+        broadcastRulesDTO.setService(service);
+        broadcastRulesDTO.setRules(rules);
 
         if (CollectionUtils.isEmpty(rules)) return;
-        stringRedisTemplate.convertAndSend(REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC, mapper.writeValueAsString(new XiehuaMessage(TYPE_UPDATE_RULE, mapper.writeValueAsString(addRule2ReqDTO))));
+        stringRedisTemplate.convertAndSend(REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC, mapper.writeValueAsString(new XiehuaMessage(TYPE_UPDATE_RULE, mapper.writeValueAsString(broadcastRulesDTO))));
     }
 
 
@@ -194,16 +193,21 @@ public class GateWayService {
 
     /**
      * 用户------>添加用户权限(存在即更新,全量替换)
-     * 注意:次接口是全量替换用户对应系统的权限标识,故调用的时候一定要传用户在对应系统的全部权限标识
+     * 注意:此接口是全量替换用户对应系统的权限标识,故调用的时候一定要传用户在对应系统的全部权限标识
      **/
     public Mono<Void> addOrUpdatePermissions(@Validated AddPermissionsReqDTO addPermissionsReqDTO) {
-        return template.opsForHash().put(REDIS_GATEWAY_USER_POWER_PREFIX + addPermissionsReqDTO.getAccount(), addPermissionsReqDTO.getSys(), String.join(",", addPermissionsReqDTO.getPermissions()))
+        String key = REDIS_GATEWAY_USER_POWER_PREFIX + addPermissionsReqDTO.getAccount();
+        return template.opsForHash().put(key, addPermissionsReqDTO.getSys(), String.join(",", addPermissionsReqDTO.getPermissions()))
                 .publishOn(Schedulers.elastic())
                 .then(Mono.fromRunnable(() -> {
                     try {
-                        stringRedisTemplate.convertAndSend(REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC, mapper.writeValueAsString(new XiehuaMessage(TYPE_UPDATE_USER_INFO, mapper.writeValueAsString(addPermissionsReqDTO))));
+                        //query redis
+                        BroadcastUserPermissionsDTO broadcastUserPermissionsDTO = new BroadcastUserPermissionsDTO();
+                        broadcastUserPermissionsDTO.setGid(addPermissionsReqDTO.getAccount());
+                        broadcastUserPermissionsDTO.setUserPermissions(gateWayComponent.synGetUserPermissionsByRedis(key));
+                        stringRedisTemplate.convertAndSend(REDIS_GATEWAY_UPDATE_LOCALCACHE_TOPIC, mapper.writeValueAsString(new XiehuaMessage(TYPE_UPDATE_USER_INFO, mapper.writeValueAsString(broadcastUserPermissionsDTO))));
                     } catch (JsonProcessingException e) {
-                        log.error("用户------>添加用户权限(存在即更新,全量替换)失败addPermissionsReqDTO:{},堆栈:{}", addPermissionsReqDTO.toString(), e);
+                        log.error("用户------>添加用户权限(存在即更新,全量替换)失败,堆栈:{}", e);
                     }
                 }));//notify update local cache
 

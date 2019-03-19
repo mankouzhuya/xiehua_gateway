@@ -1,10 +1,6 @@
 package com.xiehua.filter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiehua.cache.SimpleCache;
-import com.xiehua.cache.dto.SimpleKvDTO;
 import com.xiehua.config.enums.ClientField;
 import com.xiehua.exception.BizException;
 import io.vavr.Tuple2;
@@ -21,7 +17,6 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -44,9 +39,6 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
 
     @Autowired
     private ReactiveRedisTemplate<String, String> template;
-
-    @Autowired
-    private ObjectMapper mapper;
 
     @Autowired
     private SimpleCache defaultCache;
@@ -85,9 +77,7 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
         if (list == null || list.size() < 1) list.add(REDIS_GATEWAY_RULE_DEFAULT);
         //load rules
         String serviceKey = REDIS_GATEWAY_SERVICE_RULE + serviceName;
-        Map<String, String> ruleMap = loadLocalCache(serviceKey)
-                .stream()
-                .collect(Collectors.toMap(m -> m.getKey(), n -> n.getValue(), (x, y) -> y));
+        Map<String, String> ruleMap = loadLocalCache(serviceKey);
         Map<String, String> fmap = list
                 .stream()
                 .filter(s -> ruleMap.containsKey(s))
@@ -106,35 +96,22 @@ public class RouteFilter implements GatewayFilter, XiehuaOrdered {
 
 
     //load config form local cache
-    private List<SimpleKvDTO> loadLocalCache(String service) {
+    private Map<String, String> loadLocalCache(String service) {
         //query local cache
-        String key = defaultCache.genKey(service);
-        String value = defaultCache.get(key);
-        if (!StringUtils.isBlank(value)) {
-            try {
-                return mapper.readValue(value, new TypeReference<List<SimpleKvDTO>>() {
-                });
-            } catch (IOException e) {
-                log.error("反序列化失败:{}", e);
-            }
+        String localKey = defaultCache.genKey(service);
+        Object localValue = defaultCache.get(localKey);
+        if (!Objects.isNull(localValue)) {
+            Map<String, String> rules = (Map<String, String>) localValue;
+            return rules;
         }
         //query redis
         ReactiveHashOperations<String, String, String> opsForHash = template.opsForHash();
-        List<SimpleKvDTO> rules = opsForHash.entries(service).map(s -> {
-            SimpleKvDTO dto = new SimpleKvDTO();
-            dto.setKey(s.getKey());
-            dto.setValue(s.getValue());
-            return dto;
-        }).collectList().block();
+        Map<String, String> rules = opsForHash.entries(service).collectMap(s -> s.getKey(), t -> t.getValue()).block();
         if (CollectionUtils.isEmpty(rules)) {
             log.error(service + "路由规则未配置(redis)");
             throw new RuntimeException(service + "路由规则未配置(redis)");
-        };
-        try {
-            defaultCache.put(key, mapper.writeValueAsString(rules));
-        } catch (JsonProcessingException e) {
-            log.error("序列化失败:{}", e);
         }
+        defaultCache.put(localKey, rules);
         return rules;
     }
 

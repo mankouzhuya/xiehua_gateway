@@ -153,10 +153,10 @@ public class GateWayComponent {
         NettyDataBufferFactory nettyDataBufferFactory = new NettyDataBufferFactory(new UnpooledByteBufAllocator(false));
         String content = new String(bytes);
         reqDTO.setRespBody(content);
-        reqDTO.setRespTime(LocalDateTime.now());
         reqDTO.setRespHead(readReq2Map(respHeaders));
-        Long executeTime = LocalDateTime.now().toInstant(ZoneOffset.of("+8")).toEpochMilli() - reqDTO.getReqTime().toInstant(ZoneOffset.of("+8")).toEpochMilli();
-        reqDTO.setExecuteTime(executeTime);
+        LocalDateTime now = LocalDateTime.now();
+        reqDTO.setRespTime(now);
+        reqDTO.setExecuteTime(now.toInstant(ZoneOffset.of("+8")).toEpochMilli() - reqDTO.getReqTime().toInstant(ZoneOffset.of("+8")).toEpochMilli());
         reqDTO.setFromId(fromId);
         log.info("请求响应:{}", mapper.writeValueAsString(reqDTO));
         reqDTO.setType(TYPE_SAVE_TEMP);

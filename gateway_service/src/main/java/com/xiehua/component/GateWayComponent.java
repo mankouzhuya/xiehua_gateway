@@ -133,7 +133,7 @@ public class GateWayComponent {
         reqDTO.setFromId(fromId);
         reqDTO.setUrl(uri);
         reqDTO.setMethod(method);
-        reqDTO.setReqhead(readReq2Map(exchange));
+        reqDTO.setReqHead(readReq2Map(exchange));
         reqDTO.setReqTime(LocalDateTime.now());
         reqDTO.setType(TYPE_SAVE_TEMP);
         return reqDTO;
@@ -154,7 +154,7 @@ public class GateWayComponent {
         String content = new String(bytes);
         reqDTO.setRespBody(content);
         reqDTO.setRespTime(LocalDateTime.now());
-        reqDTO.setResphead(readReq2Map(respHeaders));
+        reqDTO.setRespHead(readReq2Map(respHeaders));
         Long executeTime = LocalDateTime.now().toInstant(ZoneOffset.of("+8")).toEpochMilli() - reqDTO.getReqTime().toInstant(ZoneOffset.of("+8")).toEpochMilli();
         reqDTO.setExecuteTime(executeTime);
         reqDTO.setFromId(fromId);

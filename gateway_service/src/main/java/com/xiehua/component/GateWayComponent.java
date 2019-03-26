@@ -158,7 +158,6 @@ public class GateWayComponent {
         reqDTO.setRespTime(now);
         reqDTO.setExecuteTime(now.toInstant(ZoneOffset.of("+8")).toEpochMilli() - reqDTO.getReqTime().toInstant(ZoneOffset.of("+8")).toEpochMilli());
         reqDTO.setFromId(fromId);
-        log.info("请求响应:{}", mapper.writeValueAsString(reqDTO));
         reqDTO.setType(TYPE_SAVE_TEMP);
         if (!StringUtils.isEmpty(reqOrder)) {//第一个请求响应结束时在去持久化链路信息
             HashMap<String, Object> map = new HashMap();
@@ -167,6 +166,7 @@ public class GateWayComponent {
             reqDTO.setBizMap(map);
         }
         //更新响应体
+        log.info("请求响应:{}", mapper.writeValueAsString(reqDTO));
         Bus.post(reqDTO);
         //统计时间
         ReqDTO reqDTO2 = new ReqDTO();

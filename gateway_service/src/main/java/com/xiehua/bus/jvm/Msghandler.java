@@ -80,6 +80,7 @@ public class Msghandler {
 
 
     public void saveTempReqDTO(ReqDTO reqDTO) throws JsonProcessingException {
+//        log.info("保存"+reqDTO);
         String key = REDIS_GATEWAY_TEMP_PREFIX + reqDTO.getTrackId();
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime end = now.plusSeconds(REDIS_GATEWAY_TEMP_EXP);

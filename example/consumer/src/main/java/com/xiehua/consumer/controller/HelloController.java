@@ -47,7 +47,7 @@ public class HelloController {
 
     @PostMapping("/public_remote/{name}")
     public UserDTO helloRemote2(@PathVariable("name") String name, @RequestBody UserDTO userDTO){
-        helloRemote.hello(name);
+        //helloRemote.hello(name);
         return helloRemote.hello2(name,userDTO);
     }
 

@@ -87,7 +87,7 @@ public class GateWayComponent {
         String reqFromId = exchange.getRequest().getHeaders().getFirst(HEAD_FROM_ID);
         if (!StringUtils.isEmpty(reqFromId)) {
             exchange.getResponse().getHeaders().put(HEAD_FROM_ID, Arrays.asList(reqFromId));
-            exchange.getResponse().getHeaders().put(HEAD_ITERM_ID, Arrays.asList(reqFromId));
+            exchange.getResponse().getHeaders().put(HEAD_ITERM_ID, Arrays.asList(spanId));
         }
         //是否采样
         //track id

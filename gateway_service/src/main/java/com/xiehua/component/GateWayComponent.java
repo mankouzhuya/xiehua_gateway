@@ -140,28 +140,23 @@ public class GateWayComponent {
     }
 
     public <T extends DataBuffer> T log(T buffer, HttpHeaders respHeaders) throws IOException, ExecutionException, InterruptedException {
-        String trackId = respHeaders.getFirst(HEAD_REQ_ID);
-        String itemId = respHeaders.getFirst(HEAD_ITERM_ID);
-        String fromId = respHeaders.getFirst(HEAD_FROM_ID);
-        ReqDTO reqDTO = getReqDTO(REDIS_GATEWAY_TEMP_PREFIX + trackId, itemId);
-        String reqOrder = respHeaders.getFirst(REQ_ORDER);
+        ReqDTO reqDTO = getAndDelLocalReqDTO(respHeaders.getFirst(HEAD_ITERM_ID));
         if (reqDTO == null) return buffer;
 
         InputStream dataBuffer = buffer.asInputStream();
         byte[] bytes = IOUtils.toByteArray(dataBuffer);
         // ByteBufAllocator.DEFAULT
         NettyDataBufferFactory nettyDataBufferFactory = new NettyDataBufferFactory(new UnpooledByteBufAllocator(false));
-        String content = new String(bytes);
-        reqDTO.setRespBody(content);
+        reqDTO.setRespBody(new String(bytes));
         reqDTO.setRespHead(readReq2Map(respHeaders));
         LocalDateTime now = LocalDateTime.now();
         reqDTO.setRespTime(now);
         reqDTO.setExecuteTime(now.toInstant(ZoneOffset.of("+8")).toEpochMilli() - reqDTO.getReqTime().toInstant(ZoneOffset.of("+8")).toEpochMilli());
-        reqDTO.setFromId(fromId);
         reqDTO.setType(TYPE_SAVE_TEMP);
+        String reqOrder = respHeaders.getFirst(REQ_ORDER);
         if (!StringUtils.isEmpty(reqOrder)) {//第一个请求响应结束时在去持久化链路信息
             HashMap<String, Object> map = new HashMap();
-            map.put("fromId", fromId);
+            map.put("fromId", reqDTO.getFromId());
             map.put("reqOrder", reqOrder);
             reqDTO.setBizMap(map);
         }
@@ -188,12 +183,17 @@ public class GateWayComponent {
         String content = new String(bytes);
         if (!StringUtils.isEmpty(content)) {
             reqDTO.setReqBody(content);
-            Bus.post(reqDTO);
+            //再次覆盖保存
+            saveLocalReqDTO(reqDTO);
         }
         DataBufferUtils.release(buffer);
         return (T) nettyDataBufferFactory.wrap(bytes);
     }
 
+    /**
+     * 从redis获取ReqDto
+     * **/
+    @Deprecated
     public ReqDTO getReqDTO(String key, String field) throws ExecutionException, InterruptedException, IOException {
         String str = asyncCommands().hget(key, field).get();
         if (StringUtils.isEmpty(str)) return null;
@@ -224,6 +224,9 @@ public class GateWayComponent {
         return connection.async();
     }
 
+    /**
+     * 获取用户权限
+     * **/
     public List<SimpleKvDTO> synGetUserPermissionsByRedis(String redisKey){
         ReactiveHashOperations<String, String, String> hashOperations = template.opsForHash();
         return hashOperations.entries(redisKey).map(s -> {
@@ -232,5 +235,34 @@ public class GateWayComponent {
             dto.setValue(s.getValue());
             return dto;
         }).collectList().block();
+    }
+
+    /***
+     * 本地临时保存ReqDto
+     * **/
+    public ReqDTO saveLocalReqDTO(ReqDTO reqDTO){
+        String key = defaultCache.genKey(reqDTO.getReqId());
+        defaultCache.put(key,reqDTO);
+        return reqDTO;
+    }
+
+    /***
+     * 本地获取ReqDto
+     * **/
+    public ReqDTO getLocalReqDTO(String reqId){
+        String key = defaultCache.genKey(reqId);
+        Object reqDTO =  defaultCache.get(key);
+        return reqDTO == null ? null :  (ReqDTO) reqDTO;
+    }
+
+    /***
+     * 本地获取并删除ReqDto
+     * **/
+    public ReqDTO getAndDelLocalReqDTO(String reqId){
+        String key = defaultCache.genKey(reqId);
+        Object reqDTO =  defaultCache.get(key);
+        if(reqDTO == null) return null;
+        defaultCache.remove(key);
+        return (ReqDTO) reqDTO;
     }
 }

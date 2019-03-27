@@ -121,7 +121,7 @@ public class XiehuaGatewayApplicationTests {
                 .setNotBefore(new Date()) //jwt不可用时间
                 .setIssuedAt(new Date()) // 签发时间
                 .setId(UUID.randomUUID().toString()).signWith(key2).compact(); //just an example id
-        System.out.println(jws2);
+        System.out.print(jws2);
        // String jws2 = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ4aWVodWFfZ2F0ZXdheSIsInN1YiI6ImdpZCIsImF1ZCI6InVzZXJfbmFtZSIsImV4cCI6MTUzMzc4NjI3OCwibmJmIjoxNTMzNzg0NDc4LCJpYXQiOjE1MzM3ODQ0NzgsImp0aSI6IjBmYjk4ZTRhLWQ0MTUtNDY4NS05N2IzLTkwOTQwY2Y5ZDdhZCJ9.cp1ar5kRWraMDWlSSBq6Nb7fzK4O_KeFNCdch_0-si4";
         //System.out.println(Jwts.parser().setSigningKey(key2).parseClaimsJws(jws2).getBody().getExpiration());
        // String a = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ4aWVodWFfZ2F0ZXdheSIsInN1YiI6InRlc3QwMSIsImF1ZCI6InVzZXJfbmFtZSIsImV4cCI6MTUzNzc3NTMyMywibmJmIjoxNTM2OTExMzIzLCJpYXQiOjE1MzY5MTEzMjMsImp0aSI6ImRhNDg3ZTBiLWViODAtNDY2NS05NzZmLTJmZTgzMTM2OTYzNSJ9.rUBGjxfqzFq-8q6u7LfsgLndfJa5eedRSNZD4iqrBmA";

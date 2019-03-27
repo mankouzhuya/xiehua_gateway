@@ -13,12 +13,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.server.WebFilterExchange;
 import org.springframework.security.web.server.authentication.ServerAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Date;
 
@@ -51,18 +51,20 @@ public class JWTAuthenticationSuccessHandler implements ServerAuthenticationSucc
             String gid = claims.getSubject();
             return template.opsForValue().delete(REDIS_GATEWAY_LOGIN_PREFIX + gid).then(template.delete(REDIS_GATEWAY_ONLINE_PREFIX + accunt)).then(webFilterExchange.getChain().filter(exchange));
         }
+        if(!StringUtils.isEmpty(webFilterExchange.getExchange().getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION))){
+            //update response
+            Date exp = Date.from(LocalDateTime.now().plusSeconds(customConfig.getJwtExpiration()).atZone(ZoneId.systemDefault()).toInstant());
+            claims.setExpiration(exp);
+            String token = Jwts.builder().setClaims(claims).signWith(customConfig.getJwtSingKey()).compact();
+            exchange.getResponse().getHeaders().put(HttpHeaders.AUTHORIZATION, Arrays.asList(BEARER + token));
+            ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(HttpHeaders.AUTHORIZATION, token)
+                    .httpOnly(true)
+                    .domain(domain)
+                    .path("/")
+                    .maxAge(customConfig.getJwtExpiration());
+            exchange.getResponse().addCookie(cookieBuilder.build());
+        }
 
-        //update response
-        Date exp = Date.from(LocalDateTime.now().plusSeconds(customConfig.getJwtExpiration()).atZone(ZoneId.systemDefault()).toInstant());
-        claims.setExpiration(exp);
-        String token = Jwts.builder().setClaims(claims).signWith(customConfig.getJwtSingKey()).compact();
-        exchange.getResponse().getHeaders().put(HttpHeaders.AUTHORIZATION, Arrays.asList(BEARER + token));
-        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(HttpHeaders.AUTHORIZATION, token)
-                .httpOnly(true)
-                .domain(domain)
-                .path("/")
-                .maxAge(customConfig.getJwtExpiration());
-        exchange.getResponse().addCookie(cookieBuilder.build());
         return webFilterExchange.getChain().filter(exchange);
     }
 

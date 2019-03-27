@@ -38,8 +38,9 @@ public class SynRedisTask {
         ReactiveHashOperations<String, String, String> ops =  template.opsForHash();
         routeLocator.getRoutes().filter(s -> s.getFilters().contains(filter)).publishOn(Schedulers.elastic()).map(s -> {
             String serviceName = s.getUri().getHost();
-            Map<String,String> rules = ops.entries(REDIS_GATEWAY_SERVICE_RULE + serviceName).collectMap(k -> k.getKey(), v -> v.getValue()).block();
-            return Mono.just(defaultCache.put(defaultCache.genKey(serviceName), rules));
+            String serviceKey = REDIS_GATEWAY_SERVICE_RULE + serviceName;
+            Map<String,String> rules = ops.entries(serviceKey).collectMap(k -> k.getKey(), v -> v.getValue()).block();
+            return Mono.just(defaultCache.put(defaultCache.genKey(serviceKey), rules));
         }).subscribe();
     }
 }

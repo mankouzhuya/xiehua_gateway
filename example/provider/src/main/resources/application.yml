@@ -9,4 +9,4 @@ eureka:
       defaultZone: http://127.0.0.1:7210/eureka/
   instance:
     metadata-map:
-      version: 2
+      version: 1

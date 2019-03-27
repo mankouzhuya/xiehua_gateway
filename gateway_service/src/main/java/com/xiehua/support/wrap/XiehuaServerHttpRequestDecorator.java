@@ -25,7 +25,8 @@ public class XiehuaServerHttpRequestDecorator extends ServerHttpRequestDecorator
         super(delegate);
         final MediaType contentType = super.getHeaders().getContentType();
         Flux<DataBuffer> flux = super.getBody();
-        Bus.post(reqDTO);
+        //先保存一次
+        gateWayComponent.saveLocalReqDTO(reqDTO);
         if (contentType != null && SUPPORT_MEDIA_TYPES.stream().anyMatch(s -> s.getType().equalsIgnoreCase(contentType.getType()) && s.getSubtype().equalsIgnoreCase(contentType.getSubtype()))) {
             body = flux.publishOn(Schedulers.elastic()).map(Try.of(s -> gateWayComponent.log(s, reqDTO)));
         } else {

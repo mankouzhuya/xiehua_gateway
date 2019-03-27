@@ -75,7 +75,8 @@ public class DefaultCache implements SimpleCache {
     public String genKey(String... key) {
         if (key == null || key.length < 1) throw new IllegalArgumentException("参数不合法");
         String temp = StringUtils.join(Arrays.asList(key).stream().sorted((m, n) -> m.compareTo(n)).collect(Collectors.toList()), "&");
-        return DigestUtils.md5DigestAsHex(temp.getBytes(StandardCharsets.UTF_8));
+//        return DigestUtils.md5DigestAsHex(temp.getBytes(StandardCharsets.UTF_8));
+        return temp;
     }
 
     /**

@@ -30,11 +30,11 @@ public class ReqDTO implements Serializable{
 
     private String method;
 
-    private Map<String,String> reqhead;
+    private Map<String,String> reqHead;
 
     private String reqBody;
 
-    private Map<String,String> resphead;
+    private Map<String,String> respHead;
 
     private String respBody;
 

@@ -2,6 +2,7 @@ package com.xiehua.fun;
 
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class Try {
 
@@ -22,6 +23,17 @@ public class Try {
         return t -> {
             try {
                 return mapper.apply(t);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        };
+    }
+
+    public static <T> Predicate<? super T> of_p(UncheckedPredicate1<T> predicate) {
+        Objects.requireNonNull(predicate);
+        return t -> {
+            try {
+                return predicate.test(t);
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }

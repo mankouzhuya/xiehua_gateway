@@ -1,7 +1,7 @@
 package com.xiehua.fun;
 
 @FunctionalInterface
-public interface UncheckedPredicate1<T> {
+public interface UncheckedPredicate<T> {
 
     boolean test(T t)throws Exception;
 

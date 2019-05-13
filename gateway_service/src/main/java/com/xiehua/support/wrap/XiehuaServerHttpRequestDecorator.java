@@ -28,7 +28,7 @@ public class XiehuaServerHttpRequestDecorator extends ServerHttpRequestDecorator
         //先保存一次
         gateWayComponent.saveLocalReqDTO(reqDTO);
         if (contentType != null && SUPPORT_MEDIA_TYPES.stream().anyMatch(s -> s.getType().equalsIgnoreCase(contentType.getType()) && s.getSubtype().equalsIgnoreCase(contentType.getSubtype()))) {
-            body = flux.publishOn(Schedulers.elastic()).map(Try.of(s -> gateWayComponent.log(s, reqDTO)));
+            body = flux.publishOn(Schedulers.elastic()).map(Try.of_f(s -> gateWayComponent.log(s, reqDTO)));
         } else {
             body = flux;
         }

@@ -87,7 +87,7 @@ public class Msghandler {
                 .put(key, reqDTO.getReqId(), mapper.writeValueAsString(reqDTO))
                 .then(template.expire(key, Duration.between(now, end)))
                 .then(Mono.just(reqDTO))
-                .flatMap(Try.of(s -> {
+                .flatMap(Try.of_f(s -> {
                     Map<String, Object> map = s.getBizMap();
                     if (map != null && map.get("reqOrder") != null) trackTool.track(reqDTO);
                     return Mono.empty();

@@ -39,6 +39,6 @@ public class JWTSecurityContextRepository implements ServerSecurityContextReposi
     @Override
     public Mono<SecurityContext> load(ServerWebExchange serverWebExchange) {
         String key = REDIS_GATEWAY_LOGIN_PREFIX + (String) serverWebExchange.getAttributes().get(REDIS_GATEWAY_LOGIN_PREFIX);
-        return template.opsForValue().get(key).switchIfEmpty(Mono.empty()).flatMap(Try.of(s -> Mono.just(mapper.readValue(s, SecurityContext.class))));
+        return template.opsForValue().get(key).switchIfEmpty(Mono.empty()).flatMap(Try.of_f(s -> Mono.just(mapper.readValue(s, SecurityContext.class))));
     }
 }

@@ -38,11 +38,11 @@ public class XiehuaServerHttpResponseDecorator extends ServerHttpResponseDecorat
             final HttpHeaders httpHeaders = getHeaders();
             if (body instanceof Mono) {
                 final Mono<DataBuffer> monoBody = (Mono<DataBuffer>) body;
-                return super.writeWith(monoBody.publishOn(Schedulers.elastic()).switchIfEmpty(Mono.defer(() -> Mono.empty())).map(Try.of(s -> gateWayComponent.log(s,httpHeaders))));
+                return super.writeWith(monoBody.publishOn(Schedulers.elastic()).switchIfEmpty(Mono.defer(() -> Mono.empty())).map(Try.of_f(s -> gateWayComponent.log(s,httpHeaders))));
             }
             if (body instanceof Flux) {
                 final Flux<DataBuffer> monoBody = (Flux<DataBuffer>) body;
-                return super.writeWith(monoBody.publishOn(Schedulers.elastic()).switchIfEmpty(Flux.defer(() -> Flux.empty())).map(Try.of(s -> gateWayComponent.log(s,httpHeaders))));
+                return super.writeWith(monoBody.publishOn(Schedulers.elastic()).switchIfEmpty(Flux.defer(() -> Flux.empty())).map(Try.of_f(s -> gateWayComponent.log(s,httpHeaders))));
             }
         }
 

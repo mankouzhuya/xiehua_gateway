@@ -43,7 +43,7 @@ public class TrackTool {
         //PriorityQueue<Tuple2<LocalDateTime, LocalDateTime>> queue = newDates.stream().sorted((s, t) -> s._1().compareTo(t._1())).collect(() -> new PriorityQueue(),(s, t) -> s.add(t),(m, n) -> m.addAll(n));
         List<Span> list = map.entrySet()
                 .stream()
-                .map(Try.of(s ->{
+                .map(Try.of_f(s ->{
                     ReqDTO t = mapper.readValue(s.getValue(),ReqDTO.class);
                     return new Span(t.getTrackId(), t.getReqId(),t.getFromId(), t.getUrl(), LocalDateTime.now(),t, new ArrayList<>(),t.getExecuteTime());
                 })).collect(Collectors.toList());

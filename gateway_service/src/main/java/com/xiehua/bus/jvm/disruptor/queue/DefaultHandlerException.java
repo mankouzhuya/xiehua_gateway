@@ -1,10 +1,10 @@
-package com.xiehua.bus.jvm.disruptor;
+package com.xiehua.bus.jvm.disruptor.queue;
 
 import com.lmax.disruptor.ExceptionHandler;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class MyHandlerException implements ExceptionHandler {
+public class DefaultHandlerException implements ExceptionHandler {
 
 
     /*

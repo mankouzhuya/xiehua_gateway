@@ -1,4 +1,4 @@
-package com.xiehua.bus.jvm.disruptor;
+package com.xiehua.bus.jvm.disruptor.queue;
 
 public abstract class ValueWrapper<T> {
 

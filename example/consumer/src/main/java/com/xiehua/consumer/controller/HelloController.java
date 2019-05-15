@@ -4,9 +4,11 @@ import com.xiehua.consumer.dto.UserDTO;
 import com.xiehua.consumer.feign.HelloFeignService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.system.ApplicationHome;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
 import java.time.LocalDateTime;
 import java.util.Random;
 
@@ -50,5 +52,7 @@ public class HelloController {
         //helloRemote.hello(name);
         return helloRemote.hello2(name,userDTO);
     }
+
+
 
 }
